@@ -1,0 +1,14 @@
+.env
+.env.*
+*.local.conf
+*.secret.conf
+*.bak
+*.backup
+*.db
+*.sqlite
+*.sqlite3
+*.mobileconfig
+*.log
+*.tmp
+*.zip
+*.dmg
