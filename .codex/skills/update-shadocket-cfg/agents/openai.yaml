@@ -1,0 +1,4 @@
+interface:
+  display_name: "更新 Shadowrocket 配置"
+  short_description: "诊断并发布 Shadowrocket 规则修复"
+  default_prompt: "使用 $update-shadocket-cfg 诊断站点或 App 访问失败，更新 Shadowrocket 配置，并验证 GitHub raw 规则链接。"
