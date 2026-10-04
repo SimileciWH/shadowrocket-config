@@ -40,7 +40,21 @@ Mac 统一使用 `sr_ai_secure_final.conf`，不再维护独立的公司规则�
 
 仓库同时为 Clash Verge (Rev) 自动维护一份严格对齐的规则集（位于 `clash/` 目录），由 `scripts/sync_clash.py` 自动从 `sr_ai_secure_final.conf` 转换生成。
 
-### 接入方式（推荐：Merge 扩展自动订阅）
+### 一键配置与状态一致性校验（推荐）
+
+在任意安装了 Clash Verge Rev 的 Mac 终端中运行以下单行命令，即可自动识别当前生效的配置、一键注入 Shadowrocket 对齐规则，并输出与基准环境的一致性对比报告：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/setup_clash_verge.py | python3
+```
+
+本地执行或仅检查状态：
+```bash
+python3 scripts/setup_clash_verge.py          # 一键配置并核验
+python3 scripts/setup_clash_verge.py --check  # 仅核验当前状态，不修改任何文件
+```
+
+### 手动接入方式（Merge 扩展）
 
 在 Clash Verge Rev 中打开 **订阅 (Profiles)** -> 找到你的主配置（如 `bwg-cal`）-> 右键选择 **编辑扩展配置 (Edit Merge)**，将 [`clash/clash_merge_template.yaml`](clash/clash_merge_template.yaml) 的内容粘贴保存即可：
 
