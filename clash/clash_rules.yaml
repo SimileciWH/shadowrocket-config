@@ -1,0 +1,182 @@
+# Complete Clash Rules
+# Synced from: sr_ai_secure_final.conf (Version: 2026.09.27-3)
+# Change: route Russian destinations and VK via JustG; keep the default proxy
+# Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
+rules:
+  # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
+  # The VPN portal must use the Mac local network before the company suffix rules.
+  - DOMAIN,ezgo.realsil.com.cn,DIRECT
+  - DOMAIN-SUFFIX,realtek.com,CORP-WINDOWS
+  - DOMAIN-SUFFIX,realsil.com.cn,CORP-WINDOWS
+  - DOMAIN-SUFFIX,rtkbf.com,CORP-WINDOWS
+  - IP-CIDR,172.26.75.18/32,CORP-WINDOWS,no-resolve
+  - IP-CIDR,172.26.75.27/32,CORP-WINDOWS,no-resolve
+  # Local / LAN / Mac mini / VNC
+  - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve
+  - IP-CIDR,172.16.0.0/12,DIRECT,no-resolve
+  - IP-CIDR,192.168.0.0/16,DIRECT,no-resolve
+  - IP-CIDR,100.64.0.0/10,DIRECT,no-resolve
+  - IP-CIDR,169.254.0.0/16,DIRECT,no-resolve
+  - DOMAIN-SUFFIX,local,DIRECT
+  - DOMAIN-SUFFIX,lan,DIRECT
+  - DOMAIN-SUFFIX,arpa,DIRECT
+  # Tailscale Private DERP Relay (Tencent Cloud Shanghai)
+  - IP-CIDR,111.231.15.226/32,DIRECT,no-resolve
+  # Bonjour / mDNS / SSDP
+  - IP-CIDR,224.0.0.251/32,DIRECT,no-resolve
+  - IP-CIDR,239.255.255.250/32,DIRECT,no-resolve
+  # AI services must stay on the selected proxy exit.
+  - DOMAIN-SUFFIX,claude.ai,节点选择
+  - DOMAIN-SUFFIX,claude.com,节点选择
+  - DOMAIN-SUFFIX,anthropic.com,节点选择
+  - DOMAIN-SUFFIX,claudeusercontent.com,节点选择
+  # Claude Code / Desktop / updater related
+  - DOMAIN,storage.googleapis.com,节点选择
+  - DOMAIN,raw.githubusercontent.com,节点选择
+  # Typeless direct path is intercepted on the current network.
+  - DOMAIN-SUFFIX,typeless.com,节点选择
+  # IP check sites should follow proxy path when validating AI exit consistency.
+  - DOMAIN-SUFFIX,ip111.cn,节点选择
+  - DOMAIN-SUFFIX,sspanel.net,节点选择
+  - DOMAIN-SUFFIX,ipify.org,节点选择
+  - DOMAIN-SUFFIX,ipinfo.io,节点选择
+  - DOMAIN-SUFFIX,cloudflare.com,节点选择
+  # Russian destinations use the existing JustG node, independently of the default proxy.
+  # Keep VK login, API and media on the same Russian VPS exit.
+  - DOMAIN-SUFFIX,vk.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk.me,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk.cc,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkontakte.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkontakte.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,mvk.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkvideo.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk.link,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk.design,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,userapi.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,userapi.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,cdn-vk.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,cdn-vk.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk-cdn.me,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk-cdn.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vk-portal.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkcache.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkcdnservice.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuser.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuseraudio.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuseraudio.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuseraudio.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuserlive.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuserlive.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuserphoto.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkusercdn.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuservideo.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuservideo.net,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkuservideo.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkmessenger.app,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkmessenger.com,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vkcloud-static.ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,vktech-static.ru,justg-vps-RU-direct
+  # Russian domain suffixes remain available without downloading a ruleset.
+  - DOMAIN-SUFFIX,ru,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,su,justg-vps-RU-direct
+  - DOMAIN-SUFFIX,xn--p1ai,justg-vps-RU-direct
+  # Pinned Russian service-domain snapshot; includes non-.ru domains.
+  - RULE-SET,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/f77c0e1442146059a2c6357721f43d19542d1734/geo/geosite/classical/category-ru.list,justg-vps-RU-direct
+  # cpolar / remote desktop tunnel direct
+  - DOMAIN,7.tcp.vip.cpolar.cn,DIRECT
+  - DOMAIN-SUFFIX,cpolar.top,DIRECT
+  - DOMAIN-SUFFIX,cpolar.com,DIRECT
+  - DOMAIN-KEYWORD,cpolar,DIRECT
+  # Feishu / Lark direct
+  - DOMAIN-SUFFIX,feishu.cn,DIRECT
+  - DOMAIN-SUFFIX,feishucdn.com,DIRECT
+  - DOMAIN-SUFFIX,larkoffice.com,DIRECT
+  - DOMAIN-SUFFIX,larksuite.com,DIRECT
+  - DOMAIN-SUFFIX,larksuitecdn.com,DIRECT
+  # Coze China direct
+  - DOMAIN-SUFFIX,coze.cn,DIRECT
+  # AI Bot China direct
+  - DOMAIN-SUFFIX,ai-bot.cn,DIRECT
+  # Kimi / Moonshot China direct
+  - DOMAIN-SUFFIX,moonshot.cn,DIRECT
+  # iCloud / CloudKit direct
+  - DOMAIN-SUFFIX,apple-cloudkit.com,DIRECT
+  - DOMAIN-SUFFIX,icloud.com,DIRECT
+  - DOMAIN-SUFFIX,icloud-content.com,DIRECT
+  - DOMAIN-SUFFIX,icloud.apple.com,DIRECT
+  - DOMAIN-SUFFIX,icloud.com.cn,DIRECT
+  - DOMAIN-SUFFIX,apple-livephotoskit.com,DIRECT
+  - DOMAIN-SUFFIX,cdn-apple.com,DIRECT
+  - DOMAIN-SUFFIX,gc.apple.com,DIRECT
+  - DOMAIN-SUFFIX,iwork.apple.com,DIRECT
+  # XMind direct
+  - DOMAIN-SUFFIX,xmind.cn,DIRECT
+  # CHSI / Xuexin direct
+  - DOMAIN-SUFFIX,chsi.com.cn,DIRECT
+  - DOMAIN-SUFFIX,chei.com.cn,DIRECT
+  # NetEase Cloud Music direct
+  - DOMAIN-SUFFIX,music.163.com,DIRECT
+  # UPDF direct
+  - DOMAIN-SUFFIX,updf.cn,DIRECT
+  - DOMAIN-SUFFIX,superace.com,DIRECT
+  # CodeBuddy direct
+  - DOMAIN-SUFFIX,codebuddy.cn,DIRECT
+  # WorkBuddy China direct
+  - DOMAIN-SUFFIX,workbuddy.cn,DIRECT
+  # AHZSKS / 安徽省教育招生考试院 direct
+  - DOMAIN-SUFFIX,ahzsks.cn,DIRECT
+  # Quark Browser / 夸克浏览器 direct
+  - DOMAIN-SUFFIX,myquark.cn,DIRECT
+  - DOMAIN-SUFFIX,quark.cn,DIRECT
+  # Alipay payment direct
+  - DOMAIN-SUFFIX,alipay.com,DIRECT
+  # Liepin recruiter service direct
+  - DOMAIN-SUFFIX,liepin.com,DIRECT
+  # Xiaohongshu / 小红书 direct
+  - DOMAIN-SUFFIX,xiaohongshu.com,DIRECT
+  - DOMAIN-SUFFIX,xhscdn.com,DIRECT
+  - DOMAIN-SUFFIX,xhscdn.net,DIRECT
+  # Douyin / 抖音 direct
+  - DOMAIN-SUFFIX,douyin.com,DIRECT
+  - DOMAIN-SUFFIX,douyincdn.com,DIRECT
+  - DOMAIN-SUFFIX,douyinpic.com,DIRECT
+  - DOMAIN-SUFFIX,douyinstatic.com,DIRECT
+  - DOMAIN-SUFFIX,douyinvod.com,DIRECT
+  - DOMAIN-SUFFIX,iesdouyin.com,DIRECT
+  # Kuaishou / 快手 direct
+  - DOMAIN-SUFFIX,kuaishou.com,DIRECT
+  - DOMAIN-SUFFIX,yximgs.com,DIRECT
+  - DOMAIN-SUFFIX,kwimgs.com,DIRECT
+  - DOMAIN-SUFFIX,kuaishouzt.com,DIRECT
+  - DOMAIN-SUFFIX,gifshow.com,DIRECT
+  - DOMAIN-SUFFIX,ksapisrv.com,DIRECT
+  - DOMAIN-SUFFIX,wskwai.com,DIRECT
+  # WeChat / Tencent IM media direct
+  - DOMAIN-SUFFIX,qq.com,DIRECT
+  - DOMAIN-SUFFIX,qq.com.cn,DIRECT
+  - DOMAIN-SUFFIX,wechat.com,DIRECT
+  - DOMAIN-SUFFIX,weixinbridge.com,DIRECT
+  - DOMAIN-SUFFIX,servicewechat.com,DIRECT
+  - DOMAIN-SUFFIX,wechatpay.cn,DIRECT
+  - DOMAIN-SUFFIX,tenpay.com,DIRECT
+  - DOMAIN-SUFFIX,qpic.cn,DIRECT
+  - DOMAIN-SUFFIX,wechatos.net,DIRECT
+  - DOMAIN-SUFFIX,gtimg.cn,DIRECT
+  - DOMAIN-SUFFIX,gtimg.com,DIRECT
+  - DOMAIN-SUFFIX,qlogo.cn,DIRECT
+  - DOMAIN-SUFFIX,tencent.com,DIRECT
+  - DOMAIN-SUFFIX,myqcloud.com,DIRECT
+  - DOMAIN,dns.weixin.qq.com.cn,DIRECT
+  # Tencent Cloud direct
+  - DOMAIN-SUFFIX,cloud.tencent.com,DIRECT
+  - DOMAIN-SUFFIX,qcloudimg.tencent-cloud.cn,DIRECT
+  - DOMAIN-SUFFIX,cloudcache.tencent-cloud.com,DIRECT
+  - DOMAIN-SUFFIX,cloudcache.tencentcs.cn,DIRECT
+  - DOMAIN-SUFFIX,dscache.tencent-cloud.cn,DIRECT
+  - DOMAIN-SUFFIX,cdn-go.cn,DIRECT
+  # Russian-hosted IP fallback, after explicit domain policies.
+  - GEOIP,RU,justg-vps-RU-direct
+  # Default
+  - MATCH,节点选择

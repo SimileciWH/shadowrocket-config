@@ -1,0 +1,51 @@
+# Clash Verge Rev Merge 模版 (订阅扩展)
+# 适用于 Clash Verge Rev -> 订阅配置 -> 扩展配置 (Merge)
+# 规则会自动通过 HTTP 远程订阅 GitHub 上的最新规则集，每 24h 自动静默更新
+
+rule-providers:
+  sr-direct:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_direct.yaml"
+    path: ./ruleset/sr-direct.yaml
+
+  sr-proxy:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_proxy.yaml"
+    path: ./ruleset/sr-proxy.yaml
+
+  sr-company:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_company.yaml"
+    path: ./ruleset/sr-company.yaml
+
+# 预定义策略组 (如果本地配置中无相应节点，优雅回退至 DIRECT 或 节点选择，防止报错)
+prepend-proxy-groups:
+  - name: CORP-WINDOWS
+    type: select
+    proxies:
+      - DIRECT
+      - 节点选择
+
+  - name: justg-vps-RU-direct
+    type: select
+    proxies:
+      - 节点选择
+      - DIRECT
+
+# 优先匹配规则列表
+prepend-rules:
+  - RULE-SET,sr-company,CORP-WINDOWS
+  - RULE-SET,sr-proxy,节点选择
+  - RULE-SET,sr-direct,DIRECT
+  - GEOIP,LAN,DIRECT,no-resolve
+  - GEOIP,CN,DIRECT
+  - MATCH,节点选择

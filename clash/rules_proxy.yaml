@@ -1,0 +1,17 @@
+# Clash Classical Rule Provider: PROXY (Claude / Anthropic / AI)
+# Synced from: sr_ai_secure_final.conf (Version: 2026.09.27-3)
+# Change: route Russian destinations and VK via JustG; keep the default proxy
+# Total entries: 12
+payload:
+  - DOMAIN-SUFFIX,claude.ai
+  - DOMAIN-SUFFIX,claude.com
+  - DOMAIN-SUFFIX,anthropic.com
+  - DOMAIN-SUFFIX,claudeusercontent.com
+  - DOMAIN,storage.googleapis.com
+  - DOMAIN,raw.githubusercontent.com
+  - DOMAIN-SUFFIX,typeless.com
+  - DOMAIN-SUFFIX,ip111.cn
+  - DOMAIN-SUFFIX,sspanel.net
+  - DOMAIN-SUFFIX,ipify.org
+  - DOMAIN-SUFFIX,ipinfo.io
+  - DOMAIN-SUFFIX,cloudflare.com

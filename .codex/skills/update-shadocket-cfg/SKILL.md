@@ -21,6 +21,7 @@ description: 当用户在 shadowrocket-config 仓库中要求处理 Shadowrocket
 - 需要诊断命令时加载 [diagnosis.md](references/diagnosis.md)。
 - 需要决定规则形态或保护 Claude 时加载 [routing-safety.md](rules/routing-safety.md)。
 - 需要编辑、归档、验证、提交、推送时加载 [publish.md](references/publish.md)。
+- 每次编辑 `sr_ai_secure_final.conf` 后，必须运行 `python3 scripts/sync_clash.py` 同步生成 Clash Verge 规则集（`clash/` 目录）。
 - 需要最终汇报格式时加载 [report-template.md](templates/report-template.md)。
 - 默认只改 GitHub raw 配置链路；除非用户明确要求，不直接改 Shadowrocket 运行态 DB。
 

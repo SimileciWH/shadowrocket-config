@@ -36,9 +36,69 @@ Mac 统一使用 `sr_ai_secure_final.conf`，不再维护独立的公司规则�
 
 仓库规则更新与客户端启用是两个步骤：发布到 `main` 后，再在 Shadowrocket 中更新配置。实际出口需从客户端连接记录核验；本次路由变更不修改 DNS 设置，也不代表完成 DNS 泄漏验收。
 
+## Clash Verge 同步配置
+
+仓库同时为 Clash Verge (Rev) 自动维护一份严格对齐的规则集（位于 `clash/` 目录），由 `scripts/sync_clash.py` 自动从 `sr_ai_secure_final.conf` 转换生成。
+
+### 接入方式（推荐：Merge 扩展自动订阅）
+
+在 Clash Verge Rev 中打开 **订阅 (Profiles)** -> 找到你的主配置（如 `bwg-cal`）-> 右键选择 **编辑扩展配置 (Edit Merge)**，将 [`clash/clash_merge_template.yaml`](clash/clash_merge_template.yaml) 的内容粘贴保存即可：
+
+```yaml
+rule-providers:
+  sr-direct:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_direct.yaml"
+    path: ./ruleset/sr-direct.yaml
+
+  sr-proxy:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_proxy.yaml"
+    path: ./ruleset/sr-proxy.yaml
+
+  sr-company:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_company.yaml"
+    path: ./ruleset/sr-company.yaml
+
+prepend-proxy-groups:
+  - name: CORP-WINDOWS
+    type: select
+    proxies:
+      - DIRECT
+      - 节点选择
+
+  - name: justg-vps-RU-direct
+    type: select
+    proxies:
+      - 节点选择
+      - DIRECT
+
+prepend-rules:
+  - RULE-SET,sr-company,CORP-WINDOWS
+  - RULE-SET,sr-proxy,节点选择
+  - RULE-SET,sr-direct,DIRECT
+  - GEOIP,LAN,DIRECT,no-resolve
+  - GEOIP,CN,DIRECT
+  - MATCH,节点选择
+```
+
+配置后，Clash Verge 启动系统代理即可无缝继承全量直连与分流规则，并在后台每 24h 自动静默拉取 GitHub 最新规则。
+
 ## Files
 
-- `sr_ai_secure_final.conf`: 稳定导入入口，手机端应使用这个 URL。
+- `sr_ai_secure_final.conf`: Shadowrocket 稳定导入入口。
+- `clash/`: Clash Verge 规则集（`rules_direct.yaml`、`rules_proxy.yaml`、`clash_rules.yaml` 等）。
+- `scripts/sync_clash.py`: 自动化双端规则同步脚本。
 - `versions/`: 历史版本归档，用于回滚和对比。
 
 ## Safety

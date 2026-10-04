@@ -12,12 +12,14 @@
 
 - `sr_ai_secure_final.conf`
 - `versions/sr_ai_secure_final_YYYYMMDD[_N].conf`
+- `clash/` 规则集（`rules_direct.yaml`、`rules_proxy.yaml`、`clash_rules.yaml` 等）
 - 规则：`always-real-ip`、`skip-proxy`、`DOMAIN-SUFFIX`
 
 验证：
 
 - `git diff --check`
 - 归档一致性
+- Clash 规则同步验证（`python3 scripts/sync_clash.py`）
 - 敏感信息扫描
 - Claude/Anthropic 规则检查
 - GitHub raw 链接检查
@@ -25,11 +27,14 @@
 发布：
 
 - commit: `<hash> <message>`
-- raw: `https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secure_final.conf`
+- raw (Shadowrocket): `https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secure_final.conf`
+- raw (Clash Direct): `https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_direct.yaml`
+- raw (Clash Proxy): `https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_proxy.yaml`
 
 用户操作：
 
-- 在 Shadowrocket Configuration 中点击 `Update`。
+- **Shadowrocket**：在 Configuration 中点击 `Update`。
+- **Clash Verge Rev**：若配置了 Merge 规则集，每 24h 自动静默更新；也可在订阅界面手动右键刷新。
 
 ## 仅诊断未修改
 
