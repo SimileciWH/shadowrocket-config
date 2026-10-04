@@ -1,0 +1,28 @@
+# Clash Verge Rev Merge 模版 (客户通用纯净版)
+# 适用于外部客户/朋友电脑，彻底剥离任何公司内网信息与私有节点
+# 包含：小红书/抖音/快手等国内大厂直连 + Claude/OpenAI 等海外 AI 智能分流
+
+rule-providers:
+  sr-direct:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_direct.yaml"
+    path: ./ruleset/sr-direct.yaml
+
+  sr-proxy:
+    type: http
+    behavior: classical
+    format: yaml
+    interval: 86400
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_proxy.yaml"
+    path: ./ruleset/sr-proxy.yaml
+
+# 优先匹配规则列表
+prepend-rules:
+  - RULE-SET,sr-proxy,节点选择
+  - RULE-SET,sr-direct,DIRECT
+  - GEOIP,LAN,DIRECT,no-resolve
+  - GEOIP,CN,DIRECT
+  - MATCH,节点选择

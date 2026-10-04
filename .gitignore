@@ -12,3 +12,5 @@
 *.tmp
 *.zip
 *.dmg
+.DS_Store
+docs/

@@ -42,23 +42,45 @@ Mac 统一使用 `sr_ai_secure_final.conf`，不再维护独立的公司规则�
 
 ### 一键配置与状态一致性校验（推荐）
 
-在任意安装了 Clash Verge Rev 的 Mac 终端中运行以下单行命令，即可自动识别当前生效的配置、一键注入 Shadowrocket 对齐规则，并输出与基准环境的一致性对比报告：
+#### 1. 发给客户 / 朋友的单行命令（客户通用纯净版，0 公司隐私，开箱即用）：
 
-```bash
-# 国内直连免翻墙（推荐，100% 畅通）：
-curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
+* **Mac / Linux 终端**：
+  ```bash
+  curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
+  ```
 
-# 双镜像防断兜底指令：
-python3 -c "$(curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py || curl -fsSL https://ghproxy.net/https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/setup_clash_verge.py)"
-```
+* **Windows PowerShell 终端（任选其一）**：
+  ```powershell
+  # 推荐方式 1（PowerShell 原生，免装额外工具）：
+  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
 
-本地执行或仅检查状态：
-```bash
-python3 scripts/setup_clash_verge.py          # 一键配置并核验
-python3 scripts/setup_clash_verge.py --check  # 仅核验当前状态，不修改任何文件
-```
+  # 方式 2（调用 Windows 10/11 内置 curl.exe）：
+  curl.exe -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
+  ```
+
+* **跨平台纯 Python 指令（全系统通用）**：
+  ```bash
+  python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
+  ```
+
+#### 2. 个人工作电脑命令（个人工作定制版，带公司 1088 SSH 隧道与内部服务分流）：
+
+* **Mac / Linux 终端**：
+  ```bash
+  curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3 - --work
+  # 或本地运行：
+  python3 scripts/setup_clash_verge.py --work
+  ```
+
+* **Windows PowerShell 终端**：
+  ```powershell
+  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python - --work
+  ```
 
 ### 手动接入方式（Merge 扩展）
+
+* **客户纯净版**：使用 [`clash/client_merge_template.yaml`](clash/client_merge_template.yaml)
+* **个人工作版**：使用 [`clash/work_merge_template.yaml`](clash/work_merge_template.yaml)
 
 在 Clash Verge Rev 中打开 **订阅 (Profiles)** -> 找到你的主配置（如 `bwg-cal`）-> 右键选择 **编辑扩展配置 (Edit Merge)**，将 [`clash/clash_merge_template.yaml`](clash/clash_merge_template.yaml) 的内容粘贴保存即可：
 
