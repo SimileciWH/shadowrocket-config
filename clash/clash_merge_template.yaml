@@ -8,7 +8,7 @@ rule-providers:
     behavior: classical
     format: yaml
     interval: 86400
-    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_direct.yaml"
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_direct.yaml"
     path: ./ruleset/sr-direct.yaml
 
   sr-proxy:
@@ -16,7 +16,7 @@ rule-providers:
     behavior: classical
     format: yaml
     interval: 86400
-    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_proxy.yaml"
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_proxy.yaml"
     path: ./ruleset/sr-proxy.yaml
 
   sr-company:
@@ -24,7 +24,7 @@ rule-providers:
     behavior: classical
     format: yaml
     interval: 86400
-    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_company.yaml"
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_company.yaml"
     path: ./ruleset/sr-company.yaml
 
 # 预定义策略组 (如果本地配置中无相应节点，优雅回退至 DIRECT 或 节点选择，防止报错)

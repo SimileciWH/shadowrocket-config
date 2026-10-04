@@ -45,7 +45,11 @@ Mac 统一使用 `sr_ai_secure_final.conf`，不再维护独立的公司规则�
 在任意安装了 Clash Verge Rev 的 Mac 终端中运行以下单行命令，即可自动识别当前生效的配置、一键注入 Shadowrocket 对齐规则，并输出与基准环境的一致性对比报告：
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/setup_clash_verge.py | python3
+# 国内直连免翻墙（推荐，100% 畅通）：
+curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
+
+# 双镜像防断兜底指令：
+python3 -c "$(curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py || curl -fsSL https://ghproxy.net/https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/setup_clash_verge.py)"
 ```
 
 本地执行或仅检查状态：
@@ -65,7 +69,7 @@ rule-providers:
     behavior: classical
     format: yaml
     interval: 86400
-    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_direct.yaml"
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_direct.yaml"
     path: ./ruleset/sr-direct.yaml
 
   sr-proxy:
@@ -73,7 +77,7 @@ rule-providers:
     behavior: classical
     format: yaml
     interval: 86400
-    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_proxy.yaml"
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_proxy.yaml"
     path: ./ruleset/sr-proxy.yaml
 
   sr-company:
@@ -81,7 +85,7 @@ rule-providers:
     behavior: classical
     format: yaml
     interval: 86400
-    url: "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash/rules_company.yaml"
+    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_company.yaml"
     path: ./ruleset/sr-company.yaml
 
 prepend-proxy-groups:
