@@ -497,8 +497,6 @@ delete: []
         print(f"{BOLD}{YELLOW}⚠ 注意：检测到部分设置与基准环境不一致，建议：{RESET}")
         if current_mode == "global":
             print(f"  - 请在 Clash Verge 界面左侧或托盘将模式切换为 {BOLD}Rule（规则模式）{RESET}，不要使用 Global。")
-        if tun_mode:
-            print(f"  - 请关闭 Clash Verge 的 TUN 模式开关。")
         print()
 
 if __name__ == "__main__":
