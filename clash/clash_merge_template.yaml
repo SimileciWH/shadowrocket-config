@@ -27,11 +27,18 @@ rule-providers:
     url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_company.yaml"
     path: ./ruleset/sr-company.yaml
 
-# 预定义策略组 (如果本地配置中无相应节点，优雅回退至 DIRECT 或 节点选择，防止报错)
+# 预定义公司节点与策略组
+proxies:
+  - name: CORP-WINDOWS-NODE
+    type: socks5
+    server: 127.0.0.1
+    port: 1088
+
 prepend-proxy-groups:
   - name: CORP-WINDOWS
     type: select
     proxies:
+      - CORP-WINDOWS-NODE
       - DIRECT
       - 节点选择
 

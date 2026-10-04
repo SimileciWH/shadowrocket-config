@@ -85,10 +85,17 @@ rule-providers:
     url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_company.yaml"
     path: ./ruleset/sr-company.yaml
 
+proxies:
+  - name: CORP-WINDOWS-NODE
+    type: socks5
+    server: 127.0.0.1
+    port: 1088
+
 prepend-proxy-groups:
   - name: CORP-WINDOWS
     type: select
     proxies:
+      - CORP-WINDOWS-NODE
       - DIRECT
       - 节点选择
 
@@ -340,6 +347,7 @@ delete: []
             ("抖音 (DIRECT)", "https://www.douyin.com/"),
             ("快手 (DIRECT)", "https://www.kuaishou.com/"),
             ("Claude (PROXY)", "https://api.anthropic.com/"),
+            ("公司内网 (CORP-WINDOWS)", "https://devops.realtek.com/"),
         ]
         for label, url in targets:
             ok, msg = test_proxy_connect(mixed_port, url)
