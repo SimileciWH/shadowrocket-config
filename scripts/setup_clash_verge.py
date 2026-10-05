@@ -787,15 +787,14 @@ def parse_simple_yaml_map(filepath):
 
 def main():
     check_only = "--check" in sys.argv or "--check-only" in sys.argv
-    is_client_mode = "--client" in sys.argv or "--public" in sys.argv
-    is_work_mode = not is_client_mode
+    is_work_mode = "--work" in sys.argv or "--company" in sys.argv
 
     print(f"\n{BOLD}{CYAN}==================================================================={RESET}")
     print(f"{BOLD}{CYAN}      Clash Verge Rev 与 Shadowrocket 环境对齐与一致性校验工具      {RESET}")
     print(f"{BOLD}{CYAN}==================================================================={RESET}\n")
 
-    edition_name = "标准全功能对齐版 (默认)" if is_work_mode else "客户精简纯净版 (--client)"
-    edition_tip = "已挂载全部直连/代理/公司内网分流与 TUN 排除网段，与 Shadowrocket 100% 对齐" if is_work_mode else "已剥离任何公司内网信息，0 隐私外泄风险"
+    edition_name = "个人工作定制版 (--work)" if is_work_mode else "客户通用纯净版 (默认)"
+    edition_tip = "已挂载公司内网 SSH 隧道 (127.0.0.1:1088)" if is_work_mode else "已剥离任何公司内网信息，0 隐私外泄风险"
     print(f"[{BLUE}MODE{RESET}] 当前配置目标: {BOLD}{edition_name}{RESET} -> {edition_tip}")
 
     # 1. 寻找 Clash Verge Rev 数据目录
@@ -1214,7 +1213,7 @@ delete: []
             mt = f.read()
         merge_has_sr = "sr-direct" in mt and "sr-proxy" in mt
 
-    report_row("配置版本架构", "全量对齐版" if is_work_mode else "客户精简版", edition_name, True)
+    report_row("配置版本架构", "客户纯净版" if not is_work_mode else "工作定制版", edition_name, True)
     report_row("规则集订阅绑定", "已挂载 sr-direct/proxy", "已挂载" if merge_has_sr else "未配置", merge_has_sr)
     report_row("直连分流规则库", "89 条 (含小红书/抖音/快手)", f"{direct_count} 条", direct_ok and direct_count >= 80)
     report_row("AI 代理规则保护", "12 条 (强制走代理出口)", f"{proxy_count} 条", proxy_ok and proxy_count >= 10)
