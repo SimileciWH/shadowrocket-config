@@ -399,7 +399,7 @@ def resolve_profile_file(profiles_dir: Path, p_uid: str, p_file: str | None = No
 def detect_main_proxy_group(profile_path: Path) -> tuple[str, list[str]]:
     """自动探测当前 Profile 的主要出站代理策略组名称及所有策略组列表（完美适配 🚀 节点选择、PROXY 等各种机场命名）。"""
     if not profile_path or not profile_path.exists():
-        return "节点选择", []
+        return "DIRECT", []
     try:
         with open(profile_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -449,17 +449,17 @@ def detect_main_proxy_group(profile_path: Path) -> tuple[str, list[str]]:
         pass
     return "DIRECT", []
 
-def build_client_merge_content(main_group: str = "节点选择", existing_groups: list[str] = None) -> str:
+def build_client_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建客户通用纯净版 Merge 扩展内容（根据实际代理组自适应绑定与注入兼容别名）。"""
     if existing_groups is None:
         existing_groups = []
 
     alias_groups = []
-    if main_group != "DIRECT":
-        if "节点选择" not in existing_groups and main_group != "节点选择":
-            alias_groups.append(f"""  - name: 节点选择\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
-        if "PROXY" not in existing_groups and main_group != "PROXY":
-            alias_groups.append(f"""  - name: PROXY\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
+    target = main_group if main_group and main_group != "DIRECT" else "DIRECT"
+    if "节点选择" not in existing_groups and main_group != "节点选择":
+        alias_groups.append(f"""  - name: 节点选择\n    type: select\n    proxies:\n      - "{target}"\n      - DIRECT""")
+    if "PROXY" not in existing_groups and main_group != "PROXY":
+        alias_groups.append(f"""  - name: PROXY\n    type: select\n    proxies:\n      - "{target}"\n      - DIRECT""")
 
     prepend_groups_block = ""
     if alias_groups:
@@ -607,20 +607,20 @@ dns:
     - "+.ibytedtos.com"
 """
 
-def build_work_merge_content(main_group: str = "节点选择", existing_groups: list[str] = None) -> str:
+def build_work_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建个人工作定制版 Merge 扩展内容（包含公司 1088 SSH 隧道与自适应代理组）。"""
     if existing_groups is None:
         existing_groups = []
 
     alias_groups = []
-    if main_group != "DIRECT":
-        if "节点选择" not in existing_groups and main_group != "节点选择":
-            alias_groups.append(f"""  - name: 节点选择\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
-        if "PROXY" not in existing_groups and main_group != "PROXY":
-            alias_groups.append(f"""  - name: PROXY\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
+    target = main_group if main_group and main_group != "DIRECT" else "DIRECT"
+    if "节点选择" not in existing_groups and main_group != "节点选择":
+        alias_groups.append(f"""  - name: 节点选择\n    type: select\n    proxies:\n      - "{target}"\n      - DIRECT""")
+    if "PROXY" not in existing_groups and main_group != "PROXY":
+        alias_groups.append(f"""  - name: PROXY\n    type: select\n    proxies:\n      - "{target}"\n      - DIRECT""")
 
     prepend_groups = [
-        f"""  - name: CORP-WINDOWS\n    type: select\n    proxies:\n      - CORP-WINDOWS-NODE\n      - DIRECT\n      - "{main_group}" """
+        f"""  - name: CORP-WINDOWS\n    type: select\n    proxies:\n      - CORP-WINDOWS-NODE\n      - DIRECT\n      - "{target}" """
     ] + alias_groups
 
     prepend_groups_block = "prepend-proxy-groups:\n" + "\n".join(prepend_groups) + "\n\n"
@@ -1163,38 +1163,11 @@ def main():
         merge_file = profiles_dir / f"{merge_uid}.yaml"
 
         if not check_only:
-            need_full_write = True
-            cur_merge = ""
             if merge_file.exists():
-                with open(merge_file, "r", encoding="utf-8") as f:
-                    cur_merge = f.read()
-                if "sr-direct" in cur_merge:
-                    need_full_write = False
-                    if is_work_mode and ("CORP-WINDOWS" not in cur_merge or "sr-company" not in cur_merge):
-                        need_full_write = True
-                    if not is_work_mode and ("CORP-WINDOWS" in cur_merge or "sr-company" in cur_merge):
-                        need_full_write = True
-                    if "WeChatAppEx Helper" not in cur_merge or "nameserver-policy" not in cur_merge or "mp.microsoft.com" not in cur_merge or "ipv6:" in cur_merge or "tun:" in cur_merge:
-                        need_full_write = True
-                    if f"RULE-SET,sr-proxy,{main_group}" not in cur_merge:
-                        need_full_write = True
-
-            if need_full_write:
-                if merge_file.exists():
-                    backup_file(merge_file)
-                with open(merge_file, "w", encoding="utf-8") as f:
-                    f.write(chosen_merge_content)
-                print(f"[{GREEN}OK{RESET}] [{p_name}] 已写入完整规则到 Merge 扩展 ({merge_file.name}) [主策略组: {main_group}]")
-            else:
                 backup_file(merge_file)
-                new_merge, merge_changed, merge_mode = merge_fake_ip_filter_content(cur_merge, ALL_REAL_IP_DOMAINS)
-                if f"RULE-SET,sr-proxy,节点选择" in new_merge and main_group != "节点选择":
-                    new_merge = new_merge.replace("RULE-SET,sr-proxy,节点选择", f"RULE-SET,sr-proxy,{main_group}")
-                    merge_changed = True
-                if merge_changed:
-                    with open(merge_file, "w", encoding="utf-8") as f:
-                        f.write(new_merge)
-                    print(f"[{GREEN}OK{RESET}] [{p_name}] 已向 Merge 扩展 ({merge_file.name}) 增量合并 Real-IP 规则")
+            with open(merge_file, "w", encoding="utf-8") as f:
+                f.write(chosen_merge_content)
+            print(f"[{GREEN}OK{RESET}] [{p_name}] 已写入完整规则到 Merge 扩展 ({merge_file.name}) [主策略组: {main_group}]")
 
             if rules_uid and rules_uid != "null":
                 rules_file = profiles_dir / f"{rules_uid}.yaml"

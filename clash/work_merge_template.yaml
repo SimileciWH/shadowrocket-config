@@ -41,10 +41,14 @@ prepend-proxy-groups:
       - DIRECT
       - 节点选择
 
-  - name: justg-vps-RU-direct
+  - name: 节点选择
     type: select
     proxies:
-      - 节点选择
+      - DIRECT
+
+  - name: PROXY
+    type: select
+    proxies:
       - DIRECT
 
 # 优先匹配规则列表
