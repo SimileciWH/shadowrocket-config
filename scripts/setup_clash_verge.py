@@ -32,6 +32,8 @@ Windows PowerShell 终端单行执行（任选其一，推荐方式 1 或方式 
   curl.exe --noproxy "*" -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
 """
 
+from __future__ import annotations
+
 import os
 import sys
 import re
@@ -336,10 +338,68 @@ def merge_system_proxy_bypass_content(content: str, bypass_items: list[str]) -> 
         return new_content, True
 
 
-def detect_main_proxy_group(profile_path: Path) -> str:
-    """自动探测当前 Profile 的主要出站代理策略组名称（如 节点选择、PROXY、Proxy 等）。"""
-    if not profile_path.exists():
-        return "节点选择"
+def extract_yaml_name(line: str) -> str | None:
+    """从 YAML 行为 name: 'xxx' 或 - name: xxx 提取纯净名称。"""
+    m = re.search(r"name:\s*(.+)", line)
+    if not m:
+        return None
+    val = m.group(1).strip()
+    if val.startswith('"'):
+        q_m = re.match(r'"([^"]+)"', val)
+        if q_m:
+            return q_m.group(1)
+    elif val.startswith("'"):
+        q_m = re.match(r"'([^']+)'", val)
+        if q_m:
+            return q_m.group(1)
+    if "," in val:
+        val = val.split(",", 1)[0].strip()
+    if val.endswith("}"):
+        val = val[:-1].strip()
+    return val.strip("\"' ")
+
+def resolve_profile_file(profiles_dir: Path, p_uid: str, p_file: str | None = None) -> Path:
+    """智能解析 Profile 实际对应的 YAML 文件路径（兼容 remote 时间戳文件名与 local uid 文件名）。"""
+    candidates = []
+    if p_file:
+        candidates.append(profiles_dir / p_file)
+        if not p_file.endswith(".yaml") and not p_file.endswith(".yml"):
+            candidates.append(profiles_dir / f"{p_file}.yaml")
+            candidates.append(profiles_dir / f"{p_file}.yml")
+    candidates.append(profiles_dir / f"{p_uid}.yaml")
+    candidates.append(profiles_dir / f"{p_uid}.yml")
+    candidates.append(profiles_dir / p_uid)
+
+    for c in candidates:
+        if c.exists() and c.is_file():
+            return c
+
+    # 如果通过 uid / file 依然没直接命中，扫描 profiles 目录下的订阅 yaml 文件（排除扩展与备份）
+    if profiles_dir.exists():
+        yaml_files = [
+            f for f in profiles_dir.iterdir()
+            if f.is_file() and f.suffix in (".yaml", ".yml")
+            and not f.name.startswith("merge_")
+            and not f.name.startswith("rules_")
+            and not f.name.endswith(".bak")
+        ]
+        if len(yaml_files) == 1:
+            return yaml_files[0]
+        for yf in yaml_files:
+            if p_file and p_file in yf.name:
+                return yf
+            if p_uid and p_uid in yf.name:
+                return yf
+        if yaml_files:
+            yaml_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
+            return yaml_files[0]
+
+    return profiles_dir / (p_file if p_file else f"{p_uid}.yaml")
+
+def detect_main_proxy_group(profile_path: Path) -> tuple[str, list[str]]:
+    """自动探测当前 Profile 的主要出站代理策略组名称及所有策略组列表（完美适配 🚀 节点选择、PROXY 等各种机场命名）。"""
+    if not profile_path or not profile_path.exists():
+        return "节点选择", []
     try:
         with open(profile_path, "r", encoding="utf-8") as f:
             content = f.read()
@@ -347,27 +407,64 @@ def detect_main_proxy_group(profile_path: Path) -> str:
         pg_match = re.search(r"^proxy-groups:\s*\n(.*?)(?=\n[a-zA-Z0-9_-]+:|\Z)", content, re.DOTALL | re.MULTILINE)
         if pg_match:
             for line in pg_match.group(1).splitlines():
-                m = re.match(r"^\s*-\s+name:\s*(.+)", line)
-                if m:
-                    group_names.append(m.group(1).strip().strip("'\""))
-        priority_candidates = ["节点选择", "PROXY", "Proxy", "PROXIES", "选择节点", "节点挑选", "全部节点", "自动选择", "Auto"]
-        for cand in priority_candidates:
-            if cand in group_names:
-                return cand
+                g_name = extract_yaml_name(line)
+                if g_name and g_name not in group_names:
+                    group_names.append(g_name)
+
         if group_names:
-            return group_names[0]
+            exact_candidates = ["节点选择", "PROXY", "Proxy", "PROXIES", "选择节点", "节点挑选", "全部节点", "自动选择", "Auto"]
+            for cand in exact_candidates:
+                if cand in group_names:
+                    return cand, group_names
+
+            fuzzy_keywords = [
+                "节点选择", "选择节点", "节点挑选",
+                "proxy", "proxies",
+                "国外流量", "科学上网", "国外", "global",
+                "全部节点", "所有节点", "手动选择",
+                "自动选择", "auto"
+            ]
+            for kw in fuzzy_keywords:
+                for gn in group_names:
+                    if kw in gn.lower():
+                        return gn, group_names
+
+            ignore_keywords = ["直连", "direct", "拦截", "reject", "广告", "ad", "国内", "apple", "microsoft", "google"]
+            candidate_groups = [
+                gn for gn in group_names
+                if not any(ik in gn.lower() for ik in ignore_keywords)
+            ]
+            if candidate_groups:
+                return candidate_groups[0], group_names
+
+            return group_names[0], group_names
+
         p_match = re.search(r"^proxies:\s*\n(.*?)(?=\n[a-zA-Z0-9_-]+:|\Z)", content, re.DOTALL | re.MULTILINE)
         if p_match:
             for line in p_match.group(1).splitlines():
-                m = re.match(r"^\s*-\s+name:\s*(.+)", line)
-                if m:
-                    return m.group(1).strip().strip("'\"")
+                p_name = extract_yaml_name(line)
+                if p_name:
+                    return p_name, group_names
     except Exception:
         pass
-    return "节点选择"
+    return "DIRECT", []
 
-def build_client_merge_content(main_group: str = "节点选择") -> str:
-    """构建客户通用纯净版 Merge 扩展内容（根据实际代理组自适应绑定）。"""
+def build_client_merge_content(main_group: str = "节点选择", existing_groups: list[str] = None) -> str:
+    """构建客户通用纯净版 Merge 扩展内容（根据实际代理组自适应绑定与注入兼容别名）。"""
+    if existing_groups is None:
+        existing_groups = []
+
+    alias_groups = []
+    if main_group != "DIRECT":
+        if "节点选择" not in existing_groups and main_group != "节点选择":
+            alias_groups.append(f"""  - name: 节点选择\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
+        if "PROXY" not in existing_groups and main_group != "PROXY":
+            alias_groups.append(f"""  - name: PROXY\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
+
+    prepend_groups_block = ""
+    if alias_groups:
+        prepend_groups_block = "prepend-proxy-groups:\n" + "\n".join(alias_groups) + "\n\n"
+
     return f"""# Profile Enhancement Merge for Clash Verge Rev (Client Public Edition)
 # Generated by shadowrocket-config sync script
 # Auto-syncs rules from CDN: fastly.jsdelivr.net / GitHub
@@ -389,7 +486,7 @@ rule-providers:
     url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_proxy.yaml"
     path: ./ruleset/sr-proxy.yaml
 
-prepend-rules:
+{prepend_groups_block}prepend-rules:
   # 微信全系客户端进程与多媒体直连（彻底保障 Mac & Windows 发文字、发图片、大文件上传、音视频通话 100% 走本地直连）
   - PROCESS-NAME,WeChat,DIRECT
   - PROCESS-NAME,WeChat.exe,DIRECT
@@ -510,8 +607,24 @@ dns:
     - "+.ibytedtos.com"
 """
 
-def build_work_merge_content(main_group: str = "节点选择") -> str:
+def build_work_merge_content(main_group: str = "节点选择", existing_groups: list[str] = None) -> str:
     """构建个人工作定制版 Merge 扩展内容（包含公司 1088 SSH 隧道与自适应代理组）。"""
+    if existing_groups is None:
+        existing_groups = []
+
+    alias_groups = []
+    if main_group != "DIRECT":
+        if "节点选择" not in existing_groups and main_group != "节点选择":
+            alias_groups.append(f"""  - name: 节点选择\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
+        if "PROXY" not in existing_groups and main_group != "PROXY":
+            alias_groups.append(f"""  - name: PROXY\n    type: select\n    proxies:\n      - "{main_group}"\n      - DIRECT""")
+
+    prepend_groups = [
+        f"""  - name: CORP-WINDOWS\n    type: select\n    proxies:\n      - CORP-WINDOWS-NODE\n      - DIRECT\n      - "{main_group}" """
+    ] + alias_groups
+
+    prepend_groups_block = "prepend-proxy-groups:\n" + "\n".join(prepend_groups) + "\n\n"
+
     return f"""# Profile Enhancement Merge for Clash Verge Rev (Work Private Edition)
 # Generated by shadowrocket-config sync script
 # Auto-syncs rules from CDN: fastly.jsdelivr.net / GitHub
@@ -547,15 +660,7 @@ proxies:
     server: 127.0.0.1
     port: 1088
 
-prepend-proxy-groups:
-  - name: CORP-WINDOWS
-    type: select
-    proxies:
-      - CORP-WINDOWS-NODE
-      - DIRECT
-      - {main_group}
-
-prepend-rules:
+{prepend_groups_block}prepend-rules:
   # 微信全系客户端进程与多媒体直连（彻底保障 Mac & Windows 发文字、发图片、大文件上传、音视频通话 100% 走本地直连）
   - PROCESS-NAME,WeChat,DIRECT
   - PROCESS-NAME,WeChat.exe,DIRECT
@@ -984,7 +1089,7 @@ def main():
 
     # 提取所有配置项 (type: local 或 remote)
     profile_items = []
-    for m in re.finditer(r"-\s+uid:\s+([a-zA-Z0-9_-]+)\b(.*?)(?=\n-\s+uid:|\Z)", profiles_content, re.DOTALL):
+    for m in re.finditer(r"^\s*-\s+uid:\s*([a-zA-Z0-9_-]+)\b(.*?)(?=\n\s*-\s+uid:|\Z)", profiles_content, re.DOTALL | re.MULTILINE):
         p_uid = m.group(1).strip()
         p_block = m.group(2)
         type_m = re.search(r"type:\s*([a-zA-Z0-9_-]+)", p_block)
@@ -992,6 +1097,8 @@ def main():
         if p_type in ("local", "remote"):
             name_m = re.search(r"name:\s*(.+)", p_block)
             p_name = name_m.group(1).strip().strip("'\"") if name_m else p_uid
+            file_m = re.search(r"file:\s*([^\s#]+)", p_block)
+            p_file = file_m.group(1).strip().strip("'\"") if file_m else None
             merge_m = re.search(r"merge:\s*([a-zA-Z0-9_-]+)", p_block)
             p_merge = merge_m.group(1).strip() if merge_m else None
             rules_m = re.search(r"rules:\s*([a-zA-Z0-9_-]+)", p_block)
@@ -1000,6 +1107,7 @@ def main():
                 "uid": p_uid,
                 "name": p_name,
                 "type": p_type,
+                "file": p_file,
                 "merge_uid": p_merge,
                 "rules_uid": p_rules,
                 "block": p_block,
@@ -1011,7 +1119,6 @@ def main():
         print(f"       请打开 Clash Verge Rev，在【配置 (Profiles)】中导入机场订阅链接后再次运行。")
         sys.exit(1)
 
-    profiles_yaml_modified = False
     if not current_uid or current_uid in ("null", "~", "None", ""):
         current_uid = profile_items[0]["uid"]
         profile_items[0]["is_current"] = True
@@ -1028,10 +1135,10 @@ def main():
         print(f"       * {pi['name']:<16} [UID: {pi['uid']}]{tag}")
 
     # 3. 逐一遍历并同步所有 Profile 的 Merge 与 Rules 扩展配置
-    profiles_yaml_modified = False
     for pi in profile_items:
         p_uid = pi["uid"]
         p_name = pi["name"]
+        p_file = pi.get("file")
         merge_uid = pi["merge_uid"]
         rules_uid = pi["rules_uid"]
         p_block = pi["block"]
@@ -1049,10 +1156,10 @@ def main():
             profiles_content = re.sub(r"(items:\s*\n)", rf"\1{merge_item_yaml}", profiles_content, count=1)
             profiles_yaml_modified = True
 
-        prof_file = profiles_dir / f"{p_uid}.yaml"
-        main_group = detect_main_proxy_group(prof_file)
+        prof_file = resolve_profile_file(profiles_dir, p_uid, p_file)
+        main_group, existing_groups = detect_main_proxy_group(prof_file)
 
-        chosen_merge_content = build_work_merge_content(main_group) if is_work_mode else build_client_merge_content(main_group)
+        chosen_merge_content = build_work_merge_content(main_group, existing_groups) if is_work_mode else build_client_merge_content(main_group, existing_groups)
         merge_file = profiles_dir / f"{merge_uid}.yaml"
 
         if not check_only:
@@ -1068,6 +1175,8 @@ def main():
                     if not is_work_mode and ("CORP-WINDOWS" in cur_merge or "sr-company" in cur_merge):
                         need_full_write = True
                     if "WeChatAppEx Helper" not in cur_merge or "nameserver-policy" not in cur_merge or "mp.microsoft.com" not in cur_merge or "ipv6:" in cur_merge or "tun:" in cur_merge:
+                        need_full_write = True
+                    if f"RULE-SET,sr-proxy,{main_group}" not in cur_merge:
                         need_full_write = True
 
             if need_full_write:
@@ -1188,7 +1297,8 @@ delete: []
                 print(f"[{YELLOW}WARN{RESET}] 更新 dns_config.yaml 遇到提示: {e}")
 
         # C. 确保当前主配置文件中的 fake-ip-filter 生效
-        cur_prof_file = profiles_dir / f"{current_uid}.yaml"
+        cur_prof = next((p for p in profile_items if p["is_current"]), profile_items[0])
+        cur_prof_file = resolve_profile_file(profiles_dir, cur_prof["uid"], cur_prof.get("file"))
         if cur_prof_file.exists():
             try:
                 backup_file(cur_prof_file)
