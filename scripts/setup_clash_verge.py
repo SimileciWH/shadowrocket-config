@@ -3,8 +3,8 @@
 Clash Verge Rev 一键配置与环境一致性核验工具 (Shadowrocket 环境对齐专用)
 
 目标：
-  将当前 Mac（或任意用户电脑）上的 Clash Verge Rev 配置与 Shadowrocket 规则环境 100% 对齐，
-  确保在“系统代理/TUN 模式 + 规则（Rule）模式、关闭全局”的前提下，分流效果与 Shadowrocket 完全一致。
+  为当前订阅生成 Shadowrocket 规则源扩展，校验后备份写入。
+  文件更新、内核候选校验、应用最终加载与网络可用性分别报告。
 
 功能：
   1. 自动定位本机 Clash Verge Rev 数据目录与激活 Profile。
@@ -35,6 +35,10 @@ Windows PowerShell 终端单行执行（任选其一，推荐方式 1 或方式 
 from __future__ import annotations
 
 import os
+import json
+import copy
+import tempfile
+import uuid
 import sys
 import re
 import socket
@@ -389,96 +393,60 @@ def extract_yaml_name(line: str) -> str | None:
         val = val[:-1].strip()
     return val.strip("\"' ")
 
-def resolve_profile_file(profiles_dir: Path, p_uid: str, p_file: str | None = None) -> Path:
-    """智能解析 Profile 实际对应的 YAML 文件路径（兼容 remote 时间戳文件名与 local uid 文件名）。"""
-    candidates = []
-    if p_file:
-        candidates.append(profiles_dir / p_file)
-        if not p_file.endswith(".yaml") and not p_file.endswith(".yml"):
-            candidates.append(profiles_dir / f"{p_file}.yaml")
-            candidates.append(profiles_dir / f"{p_file}.yml")
-    candidates.append(profiles_dir / f"{p_uid}.yaml")
-    candidates.append(profiles_dir / f"{p_uid}.yml")
-    candidates.append(profiles_dir / p_uid)
-
-    for c in candidates:
-        if c.exists() and c.is_file():
-            return c
-
-    # 如果通过 uid / file 依然没直接命中，扫描 profiles 目录下的订阅 yaml 文件（排除扩展与备份）
-    if profiles_dir.exists():
-        yaml_files = [
-            f for f in profiles_dir.iterdir()
-            if f.is_file() and f.suffix in (".yaml", ".yml")
-            and not f.name.startswith("merge_")
-            and not f.name.startswith("rules_")
-            and not f.name.endswith(".bak")
-        ]
-        if len(yaml_files) == 1:
-            return yaml_files[0]
-        for yf in yaml_files:
-            if p_file and p_file in yf.name:
-                return yf
-            if p_uid and p_uid in yf.name:
-                return yf
-        if yaml_files:
-            yaml_files.sort(key=lambda x: x.stat().st_mtime, reverse=True)
-            return yaml_files[0]
-
-    return profiles_dir / (p_file if p_file else f"{p_uid}.yaml")
-
-def detect_main_proxy_group(profile_path: Path) -> tuple[str, list[str]]:
-    """自动探测当前 Profile 的主要出站代理策略组名称及所有策略组列表（完美适配 🚀 节点选择、PROXY 等各种机场命名）。"""
-    if not profile_path or not profile_path.exists():
-        return "DIRECT", []
+def load_yaml(text):
+    """Parse YAML safely without installing packages on the customer's machine."""
     try:
-        with open(profile_path, "r", encoding="utf-8") as f:
-            content = f.read()
-        group_names = []
-        pg_match = re.search(r"^proxy-groups:\s*\n(.*?)(?=\n[a-zA-Z0-9_-]+:|\Z)", content, re.DOTALL | re.MULTILINE)
-        if pg_match:
-            for line in pg_match.group(1).splitlines():
-                g_name = extract_yaml_name(line)
-                if g_name and g_name not in group_names:
-                    group_names.append(g_name)
-
-        if group_names:
-            exact_candidates = ["节点选择", "PROXY", "Proxy", "PROXIES", "选择节点", "节点挑选", "全部节点", "自动选择", "Auto"]
-            for cand in exact_candidates:
-                if cand in group_names:
-                    return cand, group_names
-
-            fuzzy_keywords = [
-                "节点选择", "选择节点", "节点挑选",
-                "proxy", "proxies",
-                "国外流量", "科学上网", "国外", "global",
-                "全部节点", "所有节点", "手动选择",
-                "自动选择", "auto"
-            ]
-            for kw in fuzzy_keywords:
-                for gn in group_names:
-                    if kw in gn.lower():
-                        return gn, group_names
-
-            ignore_keywords = ["直连", "direct", "拦截", "reject", "广告", "ad", "国内", "apple", "microsoft", "google"]
-            candidate_groups = [
-                gn for gn in group_names
-                if not any(ik in gn.lower() for ik in ignore_keywords)
-            ]
-            if candidate_groups:
-                return candidate_groups[0], group_names
-
-            return group_names[0], group_names
-
-        p_match = re.search(r"^proxies:\s*\n(.*?)(?=\n[a-zA-Z0-9_-]+:|\Z)", content, re.DOTALL | re.MULTILINE)
-        if p_match:
-            for line in p_match.group(1).splitlines():
-                p_name = extract_yaml_name(line)
-                if p_name:
-                    return p_name, group_names
-    except Exception:
+        return json.loads(text)
+    except ValueError:
         pass
-    return "DIRECT", []
+    try:
+        import yaml
+    except ImportError:
+        if not shutil.which("ruby"):
+            raise ValueError("缺少 YAML 解析器，请安装 PyYAML 后重试：python3 -m pip install PyYAML")
+        result = subprocess.run(
+            ["ruby", "-ryaml", "-rjson", "-e",
+             "puts YAML.safe_load(STDIN.read, [], [], true).to_json"],
+            input=text, capture_output=True, text=True, timeout=15)
+        if result.returncode:
+            raise ValueError("YAML 解析失败；未修改配置")
+        return json.loads(result.stdout)
+    try:
+        return yaml.safe_load(text)
+    except yaml.YAMLError:
+        raise ValueError("YAML 解析失败；未修改配置") from None
+
+
+def yaml_text(data):
+    # JSON is a YAML subset and preserves names without manual quoting.
+    return json.dumps(data, ensure_ascii=False, indent=2) + "\n"
+
+
+def resolve_profile_file(profiles_dir, p_uid, p_file=None):
+    """Resolve only the exact metadata path; never guess another subscription."""
+    path = profiles_dir / (p_file or (p_uid + ".yaml"))
+    if path.resolve().parent != profiles_dir.resolve():
+        raise ValueError("配置文件必须位于 profiles 目录内")
+    if not path.is_file():
+        raise ValueError("元数据指向的配置文件不存在：" + path.name)
+    return path
+
+
+def detect_main_proxy_group(profile_path):
+    """Choose an existing unambiguous group, never silently route AI directly."""
+    data = load_yaml(profile_path.read_text(encoding="utf-8"))
+    names = [g["name"] for g in data.get("proxy-groups", [])]
+    matches = [r.split(",")[1].strip() for r in data.get("rules", [])
+               if isinstance(r, str) and r.startswith("MATCH,")]
+    for name in matches + ["PROXY", "节点选择", "🚀 节点选择", "Proxy"]:
+        if name in names and name not in ("DIRECT", "REJECT"):
+            return name, names
+    candidates = [n for n in names if not any(k in n.lower()
+                  for k in ("direct", "reject", "直连", "拦截", "广告"))]
+    if len(candidates) == 1:
+        return candidates[0], names
+    raise ValueError("无法唯一确定代理组，请在订阅中设置 MATCH 指向实际代理组")
+
 
 def build_client_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建客户通用纯净版 Merge 扩展内容（根据实际代理组自适应绑定与注入兼容别名）。"""
@@ -1012,38 +980,19 @@ def test_url_fetch(primary_url, filename, timeout=5):
 
 def test_proxy_connect(port, target_url, timeout=4):
     """Test connecting to a URL through Clash mixed port using curl or urllib."""
-    # 优先尝试 curl / curl.exe
     try:
         curl_bin = "curl.exe" if sys.platform == "win32" else "curl"
-        cmd = [
-            curl_bin, "-I", "-sS", "-m", str(timeout),
-            "-x", f"http://127.0.0.1:{port}",
-            target_url
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True)
-        if res.returncode == 0 and ("HTTP/" in res.stdout or any(code in res.stdout for code in ["200", "301", "302", "401", "403", "404"])):
-            first_line = res.stdout.splitlines()[0] if res.stdout else "OK"
-            return True, first_line.strip()
-    except Exception:
-        pass
-
-    # 兜底使用 Python 标准库 urllib 代理
-    try:
-        proxy_handler = urllib.request.ProxyHandler({
-            "http": f"http://127.0.0.1:{port}",
-            "https": f"http://127.0.0.1:{port}",
-        })
-        opener = urllib.request.build_opener(proxy_handler)
-        req = urllib.request.Request(
-            target_url,
-            headers={"User-Agent": "Mozilla/5.0"}
-        )
-        with opener.open(req, timeout=timeout) as resp:
-            return True, f"HTTP {resp.status}"
-    except urllib.error.HTTPError as e:
-        return True, f"HTTP {e.code}"
-    except Exception as e:
-        return False, str(e)
+        result = subprocess.run([
+            curl_bin, "-sS", "-L", "--max-time", str(timeout),
+            "--noproxy", "", "--proxy", f"http://127.0.0.1:{port}",
+            "-o", os.devnull, "-w", "%{http_code}", target_url,
+        ], capture_output=True, text=True, timeout=timeout + 2)
+        code = result.stdout.strip()
+        if result.returncode == 0 and code.isdigit() and 200 <= int(code) < 400:
+            return True, "HTTP " + code
+        return False, "HTTP " + code if code.isdigit() else "连接失败"
+    except (OSError, subprocess.TimeoutExpired):
+        return False, "curl 不可用或访问超时"
 
 def parse_simple_yaml_map(filepath):
     result = {}
@@ -1058,6 +1007,182 @@ def parse_simple_yaml_map(filepath):
                 k, v = line.split(":", 1)
                 result[k.strip()] = v.strip().strip("'\"")
     return result
+
+def prepare_deployment(verge_dir, work=False):
+    """Prepare current-profile extensions without mutating live configuration."""
+    index_path = verge_dir / "profiles.yaml"
+    index_content = index_path.read_bytes()
+    index = load_yaml(index_content.decode("utf-8"))
+    expected = {index_path: index_content}
+    items = index.get("items", [])
+    by_uid = {item["uid"]: item for item in items}
+    if len(by_uid) != len(items):
+        raise ValueError("profiles.yaml 含重复 UID")
+    profile = by_uid.get(index.get("current"))
+    if not profile or profile.get("type") not in ("local", "remote"):
+        raise ValueError("请先在 Clash 中选择一个有效订阅；不会自动选择第一个订阅")
+    directory = verge_dir / "profiles"
+    source = resolve_profile_file(directory, profile["uid"], profile.get("file"))
+    group, groups = detect_main_proxy_group(source)
+    if "," in group or "\n" in group:
+        raise ValueError("代理组名称包含规则分隔符，无法安全生成规则")
+    generated = load_yaml((build_work_merge_content if work else build_client_merge_content)("SR_TARGET", ["PROXY", "节点选择"]))
+    generated["prepend-rules"] = [rule.replace(",SR_TARGET", "," + group)
+                                  for rule in generated["prepend-rules"]]
+    options = profile.setdefault("option", {})
+    updates = {}
+
+    def extension(kind):
+        uid = options.get(kind)
+        if uid:
+            item = by_uid.get(uid)
+            if not item or item.get("type") != kind:
+                raise ValueError("扩展引用无效：" + kind)
+            if any(p.get("uid") != profile["uid"] and
+                   p.get("option", {}).get(kind) == uid for p in items):
+                raise ValueError("当前扩展被其他订阅共享，请先在 Clash 中创建独立扩展：" + kind)
+            path = resolve_profile_file(directory, uid, item.get("file"))
+            expected[path] = path.read_bytes()
+            data = load_yaml(expected[path].decode("utf-8")) or {}
+        else:
+            uid = "sr_" + uuid.uuid4().hex[:12]
+            path = directory / (uid + ".yaml")
+            item = {"uid": uid, "type": kind, "name": "SR-AutoSync-" + kind,
+                    "file": path.name, "updated": int(time.time())}
+            expected[path] = None
+            items.append(item)
+            options[kind] = uid
+            data = {}
+        if not isinstance(data, dict):
+            raise ValueError("扩展必须为 YAML 映射：" + kind)
+        return path, data
+
+    merge_path, merge = extension("merge")
+    rules_path, rules = extension("rules")
+    desired = [r for r in generated.pop("prepend-rules")
+               if not r.startswith(("MATCH,", "GEOIP,"))]
+    generated.pop("prepend-proxy-groups", None)
+    corp_nodes = generated.pop("proxies", [])
+    # Only migrate known installer-managed legacy entries; preserve unknown data.
+    def managed(rule):
+        return isinstance(rule, str) and (rule in desired or
+            rule.startswith(("RULE-SET,sr-proxy,", "RULE-SET,sr-direct,", "RULE-SET,sr-company,")))
+    legacy = merge.pop("prepend-rules", [])
+    legacy_groups = merge.get("prepend-proxy-groups", [])
+    if legacy_groups:
+        # Unknown legacy group definitions require manual migration.
+        if any(g.get("name") not in ("PROXY", "节点选择", "CORP-WINDOWS")
+               or g.get("type") != "select"
+               or any(n not in (group, "DIRECT", "CORP-WINDOWS-NODE") for n in g.get("proxies", []))
+               for g in legacy_groups):
+            raise ValueError("Merge 含自定义旧版代理组，请先在 Clash 编辑组中迁移")
+        merge.pop("prepend-proxy-groups")
+    for key in ("prepend", "append", "delete"):
+        if not isinstance(rules.get(key, []), list):
+            raise ValueError("规则扩展字段必须是列表：" + key)
+        rules[key] = [r for r in rules.get(key, []) if not managed(r)]
+    for rule in legacy:
+        if not managed(rule) and not rule.startswith(("MATCH,", "GEOIP,")) and rule not in rules["prepend"]:
+            rules["prepend"].append(rule)
+    rules["prepend"] = desired + rules["prepend"]
+    # Merge mappings recursively rather than replacing customer provider entries.
+    def combine(dst, src):
+        for key, value in src.items():
+            if isinstance(value, dict) and isinstance(dst.get(key), dict):
+                combine(dst[key], value)
+            else:
+                dst[key] = copy.deepcopy(value)
+        return dst
+    if "proxies" in merge:
+        old_nodes = merge["proxies"]
+        if old_nodes == [{"name": "CORP-WINDOWS-NODE", "type": "socks5", "server": "127.0.0.1", "port": 1088}]:
+            merge.pop("proxies")
+    combine(merge, generated)
+    if not work:
+        merge.get("rule-providers", {}).pop("sr-company", None)
+    updates[merge_path] = yaml_text(merge)
+    updates[rules_path] = yaml_text(rules)
+    if work:
+        for kind, entries in (("proxies", corp_nodes), ("groups", [{"name": "CORP-WINDOWS", "type": "select", "proxies": ["CORP-WINDOWS-NODE"]}])):
+            path, data = extension(kind)
+            names = {entry["name"] for entry in entries}
+            data["prepend"] = entries + [v for v in data.get("prepend", []) if v.get("name") not in names]
+            data.setdefault("append", [])
+            data.setdefault("delete", [])
+            updates[path] = yaml_text(data)
+    updates[index_path] = yaml_text(index)
+    # Check a synthetic candidate, explicitly not the application's full script pipeline.
+    candidate = load_yaml(source.read_text(encoding="utf-8"))
+    combine(candidate, merge)
+    for kind, field in (("proxies", "proxies"), ("groups", "proxy-groups"), ("rules", "rules")):
+        uid = options.get(kind)
+        if not uid:
+            continue
+        item = next(i for i in items if i["uid"] == uid)
+        path = directory / item["file"]
+        data = load_yaml(updates[path] if path in updates else resolve_profile_file(directory, uid, item.get("file")).read_text(encoding="utf-8"))
+        existing = candidate.get(field, [])
+        deleted = data.get("delete", [])
+        existing = [v for v in existing if (v.get("name") if isinstance(v, dict) else v) not in deleted]
+        candidate[field] = data.get("prepend", []) + existing + data.get("append", [])
+    targets = {g["name"] for g in candidate.get("proxy-groups", [])} | {p["name"] for p in candidate.get("proxies", [])} | {"DIRECT", "REJECT", "REJECT-DROP", "PASS", "COMPATIBLE"}
+    for rule in candidate.get("rules", []):
+        fields = rule.split(",")
+        target = fields[-2] if fields[-1] == "no-resolve" else fields[-1]
+        if target not in targets:
+            raise ValueError("候选规则引用不存在的代理目标：" + target)
+    core = os.environ.get("CLASH_MIHOMO_BIN") or shutil.which("verge-mihomo") or shutil.which("mihomo")
+    mac_core = Path("/Applications/Clash Verge.app/Contents/MacOS/verge-mihomo")
+    if not core and mac_core.is_file():
+        core = str(mac_core)
+    if not core:
+        raise ValueError("未找到 Mihomo，未写入配置；请将 CLASH_MIHOMO_BIN 设置为当前 Clash 内核的完整路径")
+    validation = "候选引用检查通过"
+    if core:
+        with tempfile.TemporaryDirectory(prefix="sr-check-") as temp:
+            path = Path(temp) / "candidate.yaml"
+            path.write_text(yaml_text(candidate), encoding="utf-8")
+            path.chmod(0o600)
+            result = subprocess.run([core, "-t", "-d", temp, "-f", str(path)], capture_output=True, text=True, timeout=60)
+            if result.returncode:
+                raise ValueError("候选配置未通过 Mihomo 校验；未写入配置。请在 Clash 中检查订阅和扩展")
+        validation = "候选配置通过 Mihomo 校验；应用最终合成配置仍需重载确认"
+    return {"updates": updates, "expected": expected, "profile": profile, "validation": validation}
+
+
+def apply_deployment(plan):
+    """Back up all targets and roll back already-written files on failure."""
+    originals = {p: p.read_bytes() if p.exists() else None for p in plan["updates"]}
+    if originals != plan["expected"]:
+        raise ValueError("准备期间配置已被其他程序修改，请重新运行")
+    backup_dir = next(p.parent for p in originals if p.name == "profiles.yaml") / ("sr-backup-" + uuid.uuid4().hex)
+    backup_dir.mkdir(mode=0o700)
+    print("配置备份目录：" + str(backup_dir))
+    for i, (path, content) in enumerate(originals.items()):
+        if content is not None:
+            backup = backup_dir / (str(i) + "-" + path.name)
+            backup.write_bytes(content)
+            backup.chmod(0o600)
+    written = []
+    try:
+        for path, text in plan["updates"].items():
+            with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
+                temp = Path(handle.name)
+                handle.write(text.encode("utf-8"))
+            try:
+                os.replace(temp, path)
+            finally:
+                if temp.exists():
+                    temp.unlink()
+            written.append(path)
+    except Exception:
+        for path in reversed(written):
+            if originals[path] is None:
+                path.unlink()
+            else:
+                path.write_bytes(originals[path])
+        raise
+
 
 def main():
     check_only = "--check" in sys.argv or "--check-only" in sys.argv
@@ -1112,279 +1237,18 @@ def main():
         print(f"     4. 重新执行本同步脚本即可完成一键对齐与规则注入！\n")
         sys.exit(1)
 
-    with open(profiles_yaml_path, "r", encoding="utf-8") as f:
-        profiles_content = f.read()
-
-    current_match = re.search(r"^current:\s*([a-zA-Z0-9_-]+)", profiles_content, re.MULTILINE)
-    current_uid = current_match.group(1).strip() if current_match else None
-
-    profiles_dir = verge_dir / "profiles"
-    if not profiles_dir.exists():
-        profiles_dir.mkdir(parents=True, exist_ok=True)
-
-    # 提取所有配置项 (type: local 或 remote)
-    profile_items = []
-    for m in re.finditer(r"^\s*-\s+uid:\s*([a-zA-Z0-9_-]+)\b(.*?)(?=\n\s*-\s+uid:|\Z)", profiles_content, re.DOTALL | re.MULTILINE):
-        p_uid = m.group(1).strip()
-        p_block = m.group(2)
-        type_m = re.search(r"type:\s*([a-zA-Z0-9_-]+)", p_block)
-        p_type = type_m.group(1).strip() if type_m else ""
-        if p_type in ("local", "remote"):
-            name_m = re.search(r"name:\s*(.+)", p_block)
-            p_name = name_m.group(1).strip().strip("'\"") if name_m else p_uid
-            file_m = re.search(r"file:\s*([^\s#]+)", p_block)
-            p_file = file_m.group(1).strip().strip("'\"") if file_m else None
-            merge_m = re.search(r"merge:\s*([a-zA-Z0-9_-]+)", p_block)
-            p_merge = merge_m.group(1).strip() if merge_m else None
-            rules_m = re.search(r"rules:\s*([a-zA-Z0-9_-]+)", p_block)
-            p_rules = rules_m.group(1).strip() if rules_m else None
-            profile_items.append({
-                "uid": p_uid,
-                "name": p_name,
-                "type": p_type,
-                "file": p_file,
-                "merge_uid": p_merge,
-                "rules_uid": p_rules,
-                "block": p_block,
-                "is_current": (p_uid == current_uid)
-            })
-
-    if not profile_items:
-        print(f"[{RED}FAIL{RESET}] profiles.yaml 中配置列表为空 (未导入任何订阅)。")
-        print(f"       请打开 Clash Verge Rev，在【配置 (Profiles)】中导入机场订阅链接后再次运行。")
-        sys.exit(1)
-
-    if not current_uid or current_uid in ("null", "~", "None", ""):
-        current_uid = profile_items[0]["uid"]
-        profile_items[0]["is_current"] = True
-        print(f"[{YELLOW}WARN{RESET}] 当前未激活任何配置，自动选中检测到的第一个配置: {profile_items[0]['name']} [UID: {current_uid}]")
-        if re.search(r"^current:.*", profiles_content, re.MULTILINE):
-            profiles_content = re.sub(r"^current:.*", f"current: {current_uid}", profiles_content, flags=re.MULTILINE)
-        else:
-            profiles_content = f"current: {current_uid}\n" + profiles_content
-        profiles_yaml_modified = True
-
-    print(f"[{GREEN}OK{RESET}] 在 profiles.yaml 中发现 {len(profile_items)} 个配置项:")
-    for pi in profile_items:
-        tag = f" {BOLD}(当前激活){RESET}" if pi["is_current"] else ""
-        print(f"       * {pi['name']:<16} [UID: {pi['uid']}]{tag}")
-
-    # 3. 逐一遍历并同步所有 Profile 的 Merge 与 Rules 扩展配置
-    for pi in profile_items:
-        p_uid = pi["uid"]
-        p_name = pi["name"]
-        p_file = pi.get("file")
-        merge_uid = pi["merge_uid"]
-        rules_uid = pi["rules_uid"]
-        p_block = pi["block"]
-
-        if not merge_uid or merge_uid == "null":
-            merge_uid = f"merge_{int(time.time())}_{p_uid[:4]}"
-            print(f"[{YELLOW}WARN{RESET}] 配置 {p_name} 未关联 Merge 扩展，自动绑定: {merge_uid}")
-            if "option:" in p_block:
-                new_block = re.sub(r"(option:\s*\n)", rf"\1    merge: {merge_uid}\n", p_block, count=1)
-                profiles_content = profiles_content.replace(p_block, new_block)
-            else:
-                new_block = p_block + f"\n  option:\n    merge: {merge_uid}\n"
-                profiles_content = profiles_content.replace(p_block, new_block)
-            merge_item_yaml = f"- uid: {merge_uid}\n  type: merge\n  name: SR-Rules-AutoSync\n  file: {merge_uid}.yaml\n  updated: {int(time.time())}\n"
-            profiles_content = re.sub(r"(items:\s*\n)", rf"\1{merge_item_yaml}", profiles_content, count=1)
-            profiles_yaml_modified = True
-
-        prof_file = resolve_profile_file(profiles_dir, p_uid, p_file)
-        main_group, existing_groups = detect_main_proxy_group(prof_file)
-
-        chosen_merge_content = build_work_merge_content(main_group, existing_groups) if is_work_mode else build_client_merge_content(main_group, existing_groups)
-        merge_file = profiles_dir / f"{merge_uid}.yaml"
-
+    try:
+        deployment = prepare_deployment(verge_dir, is_work_mode)
         if not check_only:
-            if merge_file.exists():
-                backup_file(merge_file)
-            with open(merge_file, "w", encoding="utf-8") as f:
-                f.write(chosen_merge_content)
-            print(f"[{GREEN}OK{RESET}] [{p_name}] 已写入完整规则到 Merge 扩展 ({merge_file.name}) [主策略组: {main_group}]")
-
-            if rules_uid and rules_uid != "null":
-                rules_file = profiles_dir / f"{rules_uid}.yaml"
-                if rules_file.exists():
-                    backup_file(rules_file)
-                company_line = "  - RULE-SET,sr-company,CORP-WINDOWS\n" if is_work_mode else ""
-                rules_ext_content = f"""# Profile Enhancement Rules Template for Clash Verge
-
-prepend:
-  # 微信全系客户端进程与多媒体直连（彻底保障 Mac & Windows 发文字、发图片、大文件上传、音视频通话 100% 走本地直连）
-  - PROCESS-NAME,WeChat,DIRECT
-  - PROCESS-NAME,WeChat.exe,DIRECT
-  - PROCESS-NAME,WeChatAppEx,DIRECT
-  - PROCESS-NAME,WeChatAppEx.exe,DIRECT
-  - PROCESS-NAME,WeChatAppEx Helper,DIRECT
-  - PROCESS-NAME,WeChatAppEx Helper (Renderer),DIRECT
-  - PROCESS-NAME,WeChatHelper,DIRECT
-  - PROCESS-NAME,WeChatHelper.exe,DIRECT
-  - PROCESS-NAME,XPlayer,DIRECT
-  - PROCESS-NAME,WeChatPlayer.exe,DIRECT
-  - PROCESS-NAME,Weixin,DIRECT
-  - PROCESS-NAME,Weixin.exe,DIRECT
-  - DOMAIN-KEYWORD,weixin,DIRECT
-  - DOMAIN-KEYWORD,wechat,DIRECT
-  - DOMAIN-KEYWORD,qpic,DIRECT
-  - DOMAIN-SUFFIX,weixin.qq.com,DIRECT
-  - DOMAIN-SUFFIX,wechat.com,DIRECT
-  - DOMAIN-SUFFIX,qpic.cn,DIRECT
-  - DOMAIN-SUFFIX,qpic.com,DIRECT
-  - DOMAIN-SUFFIX,qq.com,DIRECT
-  - DOMAIN-SUFFIX,myqcloud.com,DIRECT
-  - DOMAIN-SUFFIX,qcloud.com,DIRECT
-  - DOMAIN-SUFFIX,jsdelivr.net,DIRECT
-  # 微软 Windows 系统更新与交付优化直连（彻底杜绝 Windows Update / Delivery Optimization 走代理导致 EOF 报错及消耗大量流量）
-  - DOMAIN-SUFFIX,mp.microsoft.com,DIRECT
-  - DOMAIN-SUFFIX,windowsupdate.com,DIRECT
-  - DOMAIN-SUFFIX,windowsupdate.microsoft.com,DIRECT
-  - DOMAIN-SUFFIX,update.microsoft.com,DIRECT
-  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
-  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
-  - DOMAIN-SUFFIX,windows.com,DIRECT
-  - DOMAIN-SUFFIX,s-microsoft.com,DIRECT
-{company_line}  - RULE-SET,sr-proxy,{main_group}
-  - RULE-SET,sr-direct,DIRECT
-
-append: []
-
-delete: []
-"""
-                with open(rules_file, "w", encoding="utf-8") as f:
-                    f.write(rules_ext_content)
-                print(f"[{GREEN}OK{RESET}] [{p_name}] 已注入置顶规则到 Rules 扩展 ({rules_file.name}) [目标代理组: {main_group}]")
-
-            # 确保每个 Profile 自身的 YAML 具备 Real-IP DNS 过滤规则
-            if prof_file.exists():
-                try:
-                    with open(prof_file, "r", encoding="utf-8") as f:
-                        prof_text = f.read()
-                    new_pt, pt_changed, _ = merge_fake_ip_filter_content(prof_text, ALL_REAL_IP_DOMAINS)
-                    if pt_changed:
-                        with open(prof_file, "w", encoding="utf-8") as f:
-                            f.write(new_pt)
-                except Exception:
-                    pass
-
-    if profiles_yaml_modified and not check_only:
-        with open(profiles_yaml_path, "w", encoding="utf-8") as f:
-            f.write(profiles_content)
-
-    if not check_only:
-        # 4.2 增量合并系统代理白名单与 DNS fake-ip-filter (微信发图 + 抖音视频 Real-IP 100% 直连无阻)
-        # A. 更新 verge.yaml 的系统代理 bypass 列表
-        verge_yaml_path = verge_dir / "verge.yaml"
-        if verge_yaml_path.exists():
-            try:
-                backup_file(verge_yaml_path)
-                with open(verge_yaml_path, "r", encoding="utf-8") as f:
-                    vy = f.read()
-                new_vy, vy_changed = merge_system_proxy_bypass_content(vy, BYPASS_LIST_ITEMS)
-                if vy_changed:
-                    with open(verge_yaml_path, "w", encoding="utf-8") as f:
-                        f.write(new_vy)
-                    print(f"[{GREEN}OK{RESET}] 已向 verge.yaml 增量注入系统代理直连白名单 (system_proxy_bypass)")
-            except Exception as e:
-                print(f"[{YELLOW}WARN{RESET}] 更新 verge.yaml 遇到提示: {e}")
-
-        # B. 更新 dns_config.yaml 中的 fake-ip-filter
-        dns_config_path = verge_dir / "dns_config.yaml"
-        if dns_config_path.exists():
-            try:
-                backup_file(dns_config_path)
-                with open(dns_config_path, "r", encoding="utf-8") as f:
-                    dy = f.read()
-                new_dy, dy_changed, dy_mode = merge_fake_ip_filter_content(dy, ALL_REAL_IP_DOMAINS)
-                if dy_changed:
-                    with open(dns_config_path, "w", encoding="utf-8") as f:
-                        f.write(new_dy)
-                    print(f"[{GREEN}OK{RESET}] 已向 dns_config.yaml 增量注入 Real-IP 域名规则 [{dy_mode}模式]")
-            except Exception as e:
-                print(f"[{YELLOW}WARN{RESET}] 更新 dns_config.yaml 遇到提示: {e}")
-
-        # C. 确保当前主配置文件中的 fake-ip-filter 生效
-        cur_prof = next((p for p in profile_items if p["is_current"]), profile_items[0])
-        cur_prof_file = resolve_profile_file(profiles_dir, cur_prof["uid"], cur_prof.get("file"))
-        if cur_prof_file.exists():
-            try:
-                backup_file(cur_prof_file)
-                with open(cur_prof_file, "r", encoding="utf-8") as f:
-                    cp_text = f.read()
-                new_cp, cp_changed, cp_mode = merge_fake_ip_filter_content(cp_text, ALL_REAL_IP_DOMAINS)
-                if cp_changed:
-                    with open(cur_prof_file, "w", encoding="utf-8") as f:
-                        f.write(new_cp)
-                    print(f"[{GREEN}OK{RESET}] 已向当前配置 {cur_prof_file.name} 增量注入 Real-IP 域名规则 [{cp_mode}模式]")
-            except Exception as e:
-                print(f"[{YELLOW}WARN{RESET}] 更新当前配置遇到提示: {e}")
-
-        # D. 更新 clash-verge.yaml 中的 fake-ip-filter, ipv6 与 tun 设置
-        clash_config_path = verge_dir / "clash-verge.yaml"
-        if clash_config_path.exists():
-            try:
-                backup_file(clash_config_path)
-                with open(clash_config_path, "r", encoding="utf-8") as f:
-                    cvy = f.read()
-                new_cvy, cvy_changed, cvy_mode = merge_fake_ip_filter_content(cvy, ALL_REAL_IP_DOMAINS)
-                # 确保全局关闭 ipv6，与 Shadowrocket 保持 100% 对齐
-                if "ipv6: true" in new_cvy:
-                    new_cvy = re.sub(r"^ipv6:\s*true", "ipv6: false", new_cvy, flags=re.MULTILINE)
-                    cvy_changed = True
-                # 确保 tun 优化为 mixed 协议栈与 1500 MTU
-                if "stack: gvisor" in new_cvy:
-                    new_cvy = new_cvy.replace("stack: gvisor", "stack: mixed")
-                    cvy_changed = True
-                if "mtu:" not in new_cvy and "tun:" in new_cvy:
-                    new_cvy = re.sub(r"(tun:\s*\n(\s+.*?\n)*?\s+strict-route:\s*false)", r"\1\n  mtu: 1500\n  endpoint-independent-nat: true", new_cvy)
-                    cvy_changed = True
-                route_exclude_block = "  route-exclude-address:\n    - 100.64.0.0/10\n    - 111.231.15.226/32\n    - 127.0.0.0/8\n    - 10.0.0.0/8\n    - 172.16.0.0/12\n    - 192.168.0.0/16\n    - 169.254.0.0/16\n"
-                if "route-exclude-address:" not in new_cvy and "tun:" in new_cvy:
-                    new_cvy = re.sub(r"(tun:\s*\n)", rf"\1{route_exclude_block}", new_cvy)
-                    cvy_changed = True
-                if cvy_changed:
-                    with open(clash_config_path, "w", encoding="utf-8") as f:
-                        f.write(new_cvy)
-                    print(f"[{GREEN}OK{RESET}] 已向 clash-verge.yaml 注入 Real-IP、关闭 IPv6 并优化 TUN 协议栈 [mixed/1500]")
-            except Exception as e:
-                print(f"[{YELLOW}WARN{RESET}] 更新 clash-verge.yaml 遇到提示: {e}")
-
-        # E. 更新 config.yaml 中的 ipv6 与 tun 设置 (底层预设)
-        config_yaml_path = verge_dir / "config.yaml"
-        if config_yaml_path.exists():
-            try:
-                backup_file(config_yaml_path)
-                with open(config_yaml_path, "r", encoding="utf-8") as f:
-                    cfg_text = f.read()
-                cfg_changed = False
-                if "ipv6: true" in cfg_text:
-                    cfg_text = re.sub(r"^ipv6:\s*true", "ipv6: false", cfg_text, flags=re.MULTILINE)
-                    cfg_changed = True
-                if "stack: gvisor" in cfg_text:
-                    cfg_text = cfg_text.replace("stack: gvisor", "stack: mixed")
-                    cfg_changed = True
-                if "mtu:" not in cfg_text and "tun:" in cfg_text:
-                    cfg_text = re.sub(r"(strict-route:\s*false)", r"\1\n  mtu: 1500\n  endpoint-independent-nat: true", cfg_text)
-                    cfg_changed = True
-                if cfg_changed:
-                    with open(config_yaml_path, "w", encoding="utf-8") as f:
-                        f.write(cfg_text)
-                    print(f"[{GREEN}OK{RESET}] 已向 config.yaml 基础预设注入 ipv6: false 与 TUN mixed 模式")
-            except Exception as e:
-                pass
-
-        # 4.3 自动平滑重载核心配置与刷新缓存 (通过 unix socket 内存热重载，绝不粗暴强杀 GUI 界面)
-        mihomo_sock = Path("/var/run/clash-verge-service/users/501/verge-mihomo.sock")
-        if mihomo_sock.exists():
-            try:
-                print(f"[{BLUE}RELOAD{RESET}] 正在通过 Mihomo Unix Socket 平滑热重载配置并刷新 DNS 缓存...")
-                subprocess.run(["curl", "-s", "-X", "PUT", "--unix-socket", str(mihomo_sock), "http://localhost/configs?force=true", "-d", '{"path": ""}'], capture_output=True, timeout=3)
-                subprocess.run(["curl", "-s", "-X", "POST", "--unix-socket", str(mihomo_sock), "http://localhost/cache/fakeip/flush"], capture_output=True, timeout=3)
-            except Exception:
-                pass
-    else:
-        print(f"[{BLUE}INFO{RESET}] 处于仅核验模式 (--check)，未修改文件。")
+            apply_deployment(deployment)
+            print(f"[{GREEN}OK{RESET}] 当前订阅扩展已写入并备份；请在 Clash 中重新选择当前订阅。")
+        else:
+            print(f"[{BLUE}INFO{RESET}] 仅检查模式：未修改文件。")
+    except (ValueError, OSError, subprocess.TimeoutExpired) as exc:
+        print(f"[{RED}FAIL{RESET}] {exc}")
+        return 1
+    profiles_dir = verge_dir / "profiles"
+    cur_profile = deployment["profile"]
 
     # 5. 校验远程 GitHub 规则源（支持国内 CDN / 镜像自动回退）
     print(f"\n{BOLD}正在检测云端规则源可用性...{RESET}")
@@ -1405,17 +1269,6 @@ delete: []
     mixed_port = int(verge_config.get("verge_mixed_port", clash_config.get("mixed-port", 7897)))
     tun_mode = verge_config.get("enable_tun_mode", "false").lower() == "true"
     current_mode = clash_config.get("mode", "rule").lower()
-
-    # 如果检测到被误设为 global，自动修正为 rule
-    if not check_only and current_mode == "global":
-        print(f"[{YELLOW}FIX{RESET}] 检测到运行模式为 global，正在自动切换为 {BOLD}rule（规则模式）{RESET}...")
-        with open(clash_config_path, "r", encoding="utf-8") as f:
-            cf_text = f.read()
-        cf_text = re.sub(r"^mode:\s*global", "mode: rule", cf_text, flags=re.MULTILINE)
-        with open(clash_config_path, "w", encoding="utf-8") as f:
-            f.write(cf_text)
-        current_mode = "rule"
-        print(f"[{GREEN}OK{RESET}] 已成功切换为 rule 规则分流模式！")
 
     # 7. 检测系统代理残留状态 (例如旧的 1082)
     import socket
@@ -1479,10 +1332,10 @@ delete: []
         for label, url in targets:
             ok, msg = test_proxy_connect(mixed_port, url)
             probe_results[label] = ok
-            status_tag = f"{GREEN}成功 (200/OK){RESET}" if ok else f"{YELLOW}响应: {msg[:30]}{RESET}"
+            status_tag = f"{GREEN}收到 HTTP 响应: {msg}{RESET}" if ok else f"{YELLOW}响应: {msg[:30]}{RESET}"
             print(f"  - {label:<16}: {status_tag}")
     else:
-        print(f"\n[{BLUE}INFO{RESET}] Clash 代理端口 {mixed_port} 当前未在监听（内核未启动），配置已就绪，启动后即可直接生效。")
+        print(f"\n[{BLUE}INFO{RESET}] Clash 代理端口 {mixed_port} 当前未在监听（内核未启动），尚未验证配置加载和网络可用性。")
 
     # 8.2 核心域名 Real-IP DNS 深度拨测（确保 v.douyin.com / www.iesdouyin.com / www.douyin.com 绝不返回 198.18.x.x）
     douyin_dns_status = {}
@@ -1503,54 +1356,14 @@ delete: []
 
     all_douyin_real = all(st[1] for st in douyin_dns_status.values()) if douyin_dns_status else False
 
-    # 9. 状态一致性检测报告
-    print(f"\n{BOLD}{CYAN}======================== 环境一致性对照报告 ========================{RESET}")
-
-    def report_row(item, sr_baseline, clash_state, is_match):
-        badge = f"{GREEN}完全一致 (MATCH){RESET}" if is_match else f"{RED}不一致 (DIFF){RESET}"
-        print(f"  * {item:<20}: 基准=[{sr_baseline}] -> 本机=[{clash_state}] {badge}")
-
-    cur_profile = next((p for p in profile_items if p["is_current"]), profile_items[0])
-    cur_merge_file = profiles_dir / f"{cur_profile['merge_uid']}.yaml"
-    merge_has_sr = False
-    if cur_merge_file.exists():
-        with open(cur_merge_file, "r", encoding="utf-8") as f:
-            mt = f.read()
-        merge_has_sr = "sr-direct" in mt and "sr-proxy" in mt
-
-    report_row("配置版本架构", "客户纯净版" if not is_work_mode else "工作定制版", edition_name, True)
-    report_row("规则集订阅绑定", "已挂载 sr-direct/proxy", "已挂载" if merge_has_sr else "未配置", merge_has_sr)
-    report_row("直连分流规则库", "89 条 (含小红书/抖音/快手)", f"{direct_count} 条", direct_ok and direct_count >= 80)
-    report_row("AI 代理规则保护", "12 条 (强制走代理出口)", f"{proxy_count} 条", proxy_ok and proxy_count >= 10)
-    report_row("微信发图/音视频", "进程直连 + fake-ip-filter", "已保障", True)
-    report_row("抖音核心 Real-IP", "真实公网 IP (非 Fake-IP)", "已生效 (返回公网 IP)" if all_douyin_real else "未就绪 (Fake-IP)", all_douyin_real)
-    if is_work_mode:
-        report_row("公司内网隧道分流", "1088 端口 SSH 隧道", "已配置", True)
-    report_row("虚拟 TUN 模式", "规则分流 (TUN/系统代理均可)", "已开启 (网卡级接管)" if tun_mode else "未开启 (系统代理)", True)
-    report_row("全局模式拦截", "禁用全局，使用 Rule", "全局(Global)" if current_mode == "global" else "规则(Rule)", current_mode != "global")
-    report_row("自动同步周期", "24h 静默同步", "24h (86400s)", True)
-
-    print(f"{BOLD}{CYAN}==================================================================={RESET}\n")
-
-    # 10. 最终判定与提示
-    is_fully_aligned = merge_has_sr and direct_ok and proxy_ok and current_mode != "global"
-
-    if is_fully_aligned:
-        print(f"{BOLD}{GREEN}✔ 判定完成：本机 Clash Verge Rev 分流环境已成功配置！[{edition_name}]{RESET}")
-        print(f"  - 小红书、抖音、快手等国内流量自动直连；")
-        print(f"  - Claude / OpenAI / Anthropic 敏感流量自动强制代理；")
-        if is_work_mode:
-            print(f"  - 公司内部网络与 Jenkins 自动走 1088 SSH 隧道出站；")
-        else:
-            print(f"  - 0 个人/公司隐私数据残留，安全合规，开箱即用；")
-        print(f"  - 规则每天自动从 GitHub/CDN 静默更新，双端同步维护。\n")
-        print(f"{BOLD}生效操作指引：{RESET}")
-        print(f"  打开 Clash Verge Rev，在配置列表中点击 {BOLD}{cur_profile['name']}{RESET}（或右键点击选择 {BOLD}Select{RESET}）即可无感生效！\n")
-    else:
-        print(f"{BOLD}{YELLOW}⚠ 注意：检测到部分设置与基准环境不一致，建议：{RESET}")
-        if current_mode == "global":
-            print(f"  - 请在 Clash Verge 界面左侧或托盘将模式切换为 {BOLD}Rule（规则模式）{RESET}，不要使用 Global。")
-        print()
+    print("\n验收状态：")
+    print("  扩展文件：" + ("已准备，未写入" if check_only else "已写入并备份"))
+    print("  内核校验：" + deployment["validation"])
+    print("  应用加载：未验证；请重新选择当前订阅，确认无校验错误")
+    print("  网络探测：仅代表当前正在运行的配置，不证明新扩展已加载")
+    print("  当前模式：" + current_mode)
+    print("  请勿将文件写入成功视为部署验收通过。")
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
