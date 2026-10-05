@@ -788,7 +788,7 @@ def main():
 
     print(f"[{GREEN}OK{RESET}] 定位到 Clash Verge Rev 数据目录: {verge_dir}")
 
-    # 2. 读取 profiles.yaml 识别当前激活配置
+    # 2. 读取 profiles.yaml 识别所有配置（包括当前配置与备用配置，如 justg, bwg-cal 等）
     profiles_yaml_path = verge_dir / "profiles.yaml"
     with open(profiles_yaml_path, "r", encoding="utf-8") as f:
         profiles_content = f.read()
@@ -800,98 +800,103 @@ def main():
         print(f"[{RED}FAIL{RESET}] 未在 profiles.yaml 中找到激活配置 (current)。")
         sys.exit(1)
 
-    profile_pattern = rf"-\s+uid:\s+{re.escape(current_uid)}\b(.*?)(?=\n-\s+uid:|\Z)"
-    profile_match = re.search(profile_pattern, profiles_content, re.DOTALL)
-
-    profile_name = current_uid
-    merge_uid = None
-
-    if profile_match:
-        block = profile_match.group(1)
-        name_m = re.search(r"name:\s*(.+)", block)
-        if name_m:
-            profile_name = name_m.group(1).strip().strip("'\"")
-        merge_m = re.search(r"merge:\s*([a-zA-Z0-9_-]+)", block)
-        if merge_m:
-            merge_uid = merge_m.group(1).strip()
-
-    print(f"[{GREEN}OK{RESET}] 当前生效 Profile: {BOLD}{profile_name}{RESET} (UID: {current_uid})")
-
-    # 3. 确定 Merge 文件位置
     profiles_dir = verge_dir / "profiles"
     if not profiles_dir.exists():
         profiles_dir.mkdir(parents=True, exist_ok=True)
 
-    if not merge_uid or merge_uid == "null":
-        merge_uid = f"merge_{int(time.time())}"
-        print(f"[{YELLOW}WARN{RESET}] 当前 Profile 未关联 Merge 扩展，将自动绑定: {merge_uid}")
-        if "option:" in block:
-            new_block = re.sub(r"(option:\s*\n)", rf"\1    merge: {merge_uid}\n", block, count=1)
-            profiles_content = profiles_content.replace(block, new_block)
-        else:
-            new_block = block + f"\n  option:\n    merge: {merge_uid}\n"
-            profiles_content = profiles_content.replace(block, new_block)
+    # 提取所有配置项 (type: local 或 remote)
+    profile_items = []
+    for m in re.finditer(r"-\s+uid:\s+([a-zA-Z0-9_-]+)\b(.*?)(?=\n-\s+uid:|\Z)", profiles_content, re.DOTALL):
+        p_uid = m.group(1).strip()
+        p_block = m.group(2)
+        type_m = re.search(r"type:\s*([a-zA-Z0-9_-]+)", p_block)
+        p_type = type_m.group(1).strip() if type_m else ""
+        if p_type in ("local", "remote"):
+            name_m = re.search(r"name:\s*(.+)", p_block)
+            p_name = name_m.group(1).strip().strip("'\"") if name_m else p_uid
+            merge_m = re.search(r"merge:\s*([a-zA-Z0-9_-]+)", p_block)
+            p_merge = merge_m.group(1).strip() if merge_m else None
+            rules_m = re.search(r"rules:\s*([a-zA-Z0-9_-]+)", p_block)
+            p_rules = rules_m.group(1).strip() if rules_m else None
+            profile_items.append({
+                "uid": p_uid,
+                "name": p_name,
+                "type": p_type,
+                "merge_uid": p_merge,
+                "rules_uid": p_rules,
+                "block": p_block,
+                "is_current": (p_uid == current_uid)
+            })
 
-        merge_item_yaml = f"- uid: {merge_uid}\n  type: merge\n  name: SR-Rules-AutoSync\n  file: {merge_uid}.yaml\n  updated: {int(time.time())}\n"
-        profiles_content = re.sub(r"(items:\s*\n)", rf"\1{merge_item_yaml}", profiles_content, count=1)
+    print(f"[{GREEN}OK{RESET}] 在 profiles.yaml 中发现 {len(profile_items)} 个配置项:")
+    for pi in profile_items:
+        tag = f" {BOLD}(当前激活){RESET}" if pi["is_current"] else ""
+        print(f"       * {pi['name']:<16} [UID: {pi['uid']}]{tag}")
+
+    # 3. 逐一遍历并同步所有 Profile 的 Merge 与 Rules 扩展配置
+    profiles_yaml_modified = False
+    for pi in profile_items:
+        p_uid = pi["uid"]
+        p_name = pi["name"]
+        merge_uid = pi["merge_uid"]
+        rules_uid = pi["rules_uid"]
+        p_block = pi["block"]
+
+        if not merge_uid or merge_uid == "null":
+            merge_uid = f"merge_{int(time.time())}_{p_uid[:4]}"
+            print(f"[{YELLOW}WARN{RESET}] 配置 {p_name} 未关联 Merge 扩展，自动绑定: {merge_uid}")
+            if "option:" in p_block:
+                new_block = re.sub(r"(option:\s*\n)", rf"\1    merge: {merge_uid}\n", p_block, count=1)
+                profiles_content = profiles_content.replace(p_block, new_block)
+            else:
+                new_block = p_block + f"\n  option:\n    merge: {merge_uid}\n"
+                profiles_content = profiles_content.replace(p_block, new_block)
+            merge_item_yaml = f"- uid: {merge_uid}\n  type: merge\n  name: SR-Rules-AutoSync\n  file: {merge_uid}.yaml\n  updated: {int(time.time())}\n"
+            profiles_content = re.sub(r"(items:\s*\n)", rf"\1{merge_item_yaml}", profiles_content, count=1)
+            profiles_yaml_modified = True
+
+        prof_file = profiles_dir / f"{p_uid}.yaml"
+        main_group = detect_main_proxy_group(prof_file)
+
+        chosen_merge_content = build_work_merge_content(main_group) if is_work_mode else build_client_merge_content(main_group)
+        merge_file = profiles_dir / f"{merge_uid}.yaml"
 
         if not check_only:
-            with open(profiles_yaml_path, "w", encoding="utf-8") as f:
-                f.write(profiles_content)
-
-    cur_prof_file = profiles_dir / f"{current_uid}.yaml"
-    main_group = detect_main_proxy_group(cur_prof_file)
-    print(f"[{GREEN}OK{RESET}] 探测到当前生效 Profile 的主要出站策略组: {BOLD}{main_group}{RESET}")
-
-    rules_m = re.search(r"rules:\s*([^\s\n]+)", block)
-    rules_uid = rules_m.group(1).strip() if rules_m else None
-    merge_file = profiles_dir / f"{merge_uid}.yaml"
-    chosen_merge_content = build_work_merge_content(main_group) if is_work_mode else build_client_merge_content(main_group)
-
-    # 4. 执行写入（非只读模式）
-    if not check_only:
-        # 4.1 写入 / 增量合并 Merge 扩展文件
-        need_full_write = True
-        cur_merge = ""
-        if merge_file.exists():
-            with open(merge_file, "r", encoding="utf-8") as f:
-                cur_merge = f.read()
-            if "sr-direct" in cur_merge:
-                need_full_write = False
-                # 如果是客户通用版，但旧配置残留了工作版的公司规则，强制重写
-                if not is_work_mode and ("CORP-WINDOWS" in cur_merge or "sr-company" in cur_merge):
-                    need_full_write = True
-                # 若缺少微信关键多媒体进程、国内 DNS 保障、IPv6 关闭或 TUN mixed 协议栈优化，强制重写升级
-                if "WeChatAppEx Helper" not in cur_merge or "nameserver-policy" not in cur_merge or "stack: mixed" not in cur_merge or "ipv6: false" not in cur_merge:
-                    need_full_write = True
-
-        if need_full_write:
+            need_full_write = True
+            cur_merge = ""
             if merge_file.exists():
-                backup_file(merge_file)
-            with open(merge_file, "w", encoding="utf-8") as f:
-                f.write(chosen_merge_content)
-            print(f"[{GREEN}OK{RESET}] 已写入 {edition_name} 完整规则到 Merge 扩展文件 ({merge_file.name})")
-        else:
-            backup_file(merge_file)
-            new_merge, merge_changed, merge_mode = merge_fake_ip_filter_content(cur_merge, ALL_REAL_IP_DOMAINS)
-            # 自动纠正旧扩展中可能遗留的固定策略组名
-            if "RULE-SET,sr-proxy,节点选择" in new_merge and main_group != "节点选择":
-                new_merge = new_merge.replace("RULE-SET,sr-proxy,节点选择", f"RULE-SET,sr-proxy,{main_group}")
-                merge_changed = True
-            if merge_changed:
-                with open(merge_file, "w", encoding="utf-8") as f:
-                    f.write(new_merge)
-                print(f"[{GREEN}OK{RESET}] 已向 Merge 扩展文件 ({merge_file.name}) 增量合并 Real-IP DNS 过滤规则 [{merge_mode}模式]")
-            else:
-                print(f"[{GREEN}OK{RESET}] Merge 扩展文件 ({merge_file.name}) 已包含最新 Real-IP 规则 (幂等保留)")
+                with open(merge_file, "r", encoding="utf-8") as f:
+                    cur_merge = f.read()
+                if "sr-direct" in cur_merge:
+                    need_full_write = False
+                    if not is_work_mode and ("CORP-WINDOWS" in cur_merge or "sr-company" in cur_merge):
+                        need_full_write = True
+                    if "WeChatAppEx Helper" not in cur_merge or "nameserver-policy" not in cur_merge or "stack: mixed" not in cur_merge or "ipv6: false" not in cur_merge:
+                        need_full_write = True
 
-        # 同步写入 Rules 扩展以保障置顶优先级
-        if rules_uid and rules_uid != "null":
-            rules_file = profiles_dir / f"{rules_uid}.yaml"
-            if rules_file.exists():
-                backup_file(rules_file)
-            company_line = "  - RULE-SET,sr-company,CORP-WINDOWS\n" if is_work_mode else ""
-            rules_ext_content = f"""# Profile Enhancement Rules Template for Clash Verge
+            if need_full_write:
+                if merge_file.exists():
+                    backup_file(merge_file)
+                with open(merge_file, "w", encoding="utf-8") as f:
+                    f.write(chosen_merge_content)
+                print(f"[{GREEN}OK{RESET}] [{p_name}] 已写入完整规则到 Merge 扩展 ({merge_file.name}) [主策略组: {main_group}]")
+            else:
+                backup_file(merge_file)
+                new_merge, merge_changed, merge_mode = merge_fake_ip_filter_content(cur_merge, ALL_REAL_IP_DOMAINS)
+                if f"RULE-SET,sr-proxy,节点选择" in new_merge and main_group != "节点选择":
+                    new_merge = new_merge.replace("RULE-SET,sr-proxy,节点选择", f"RULE-SET,sr-proxy,{main_group}")
+                    merge_changed = True
+                if merge_changed:
+                    with open(merge_file, "w", encoding="utf-8") as f:
+                        f.write(new_merge)
+                    print(f"[{GREEN}OK{RESET}] [{p_name}] 已向 Merge 扩展 ({merge_file.name}) 增量合并 Real-IP 规则")
+
+            if rules_uid and rules_uid != "null":
+                rules_file = profiles_dir / f"{rules_uid}.yaml"
+                if rules_file.exists():
+                    backup_file(rules_file)
+                company_line = "  - RULE-SET,sr-company,CORP-WINDOWS\n" if is_work_mode else ""
+                rules_ext_content = f"""# Profile Enhancement Rules Template for Clash Verge
 
 prepend:
   # 微信全系客户端进程与多媒体直连（彻底保障 Mac & Windows 发文字、发图片、大文件上传、音视频通话 100% 走本地直连）
@@ -925,9 +930,25 @@ append: []
 
 delete: []
 """
-            with open(rules_file, "w", encoding="utf-8") as f:
-                f.write(rules_ext_content)
-            print(f"[{GREEN}OK{RESET}] 已一键注入置顶规则到 Rules 扩展文件 ({rules_file.name}) [目标代理组: {main_group}]")
+                with open(rules_file, "w", encoding="utf-8") as f:
+                    f.write(rules_ext_content)
+                print(f"[{GREEN}OK{RESET}] [{p_name}] 已注入置顶规则到 Rules 扩展 ({rules_file.name}) [目标代理组: {main_group}]")
+
+            # 确保每个 Profile 自身的 YAML 具备 Real-IP DNS 过滤规则
+            if prof_file.exists():
+                try:
+                    with open(prof_file, "r", encoding="utf-8") as f:
+                        prof_text = f.read()
+                    new_pt, pt_changed, _ = merge_fake_ip_filter_content(prof_text, ALL_REAL_IP_DOMAINS)
+                    if pt_changed:
+                        with open(prof_file, "w", encoding="utf-8") as f:
+                            f.write(new_pt)
+                except Exception:
+                    pass
+
+    if profiles_yaml_modified and not check_only:
+        with open(profiles_yaml_path, "w", encoding="utf-8") as f:
+            f.write(profiles_content)
 
         # 4.2 增量合并系统代理白名单与 DNS fake-ip-filter (微信发图 + 抖音视频 Real-IP 100% 直连无阻)
         # A. 更新 verge.yaml 的系统代理 bypass 列表
@@ -1163,12 +1184,13 @@ delete: []
         badge = f"{GREEN}完全一致 (MATCH){RESET}" if is_match else f"{RED}不一致 (DIFF){RESET}"
         print(f"  * {item:<20}: 基准=[{sr_baseline}] -> 本机=[{clash_state}] {badge}")
 
+    cur_profile = next((p for p in profile_items if p["is_current"]), profile_items[0])
+    cur_merge_file = profiles_dir / f"{cur_profile['merge_uid']}.yaml"
     merge_has_sr = False
-    if merge_file.exists():
-        with open(merge_file, "r", encoding="utf-8") as f:
+    if cur_merge_file.exists():
+        with open(cur_merge_file, "r", encoding="utf-8") as f:
             mt = f.read()
         merge_has_sr = "sr-direct" in mt and "sr-proxy" in mt
-
 
     report_row("配置版本架构", "客户纯净版" if not is_work_mode else "工作定制版", edition_name, True)
     report_row("规则集订阅绑定", "已挂载 sr-direct/proxy", "已挂载" if merge_has_sr else "未配置", merge_has_sr)
@@ -1197,7 +1219,7 @@ delete: []
             print(f"  - 0 个人/公司隐私数据残留，安全合规，开箱即用；")
         print(f"  - 规则每天自动从 GitHub/CDN 静默更新，双端同步维护。\n")
         print(f"{BOLD}生效操作指引：{RESET}")
-        print(f"  打开 Clash Verge Rev，在配置列表中右键点击 {BOLD}{profile_name}{RESET} -> 选择 {BOLD}“刷新 (Refresh)”{RESET} 即可！\n")
+        print(f"  打开 Clash Verge Rev，在配置列表中点击 {BOLD}{cur_profile['name']}{RESET}（或右键点击选择 {BOLD}Select{RESET}）即可无感生效！\n")
     else:
         print(f"{BOLD}{YELLOW}⚠ 注意：检测到部分设置与基准环境不一致，建议：{RESET}")
         if current_mode == "global":
