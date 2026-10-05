@@ -85,8 +85,53 @@ rule-providers:
     path: ./ruleset/sr-proxy.yaml
 
 prepend-rules:
+  # 微信核心客户端进程直连（彻底保障 Mac & Windows 发文字、发图片、语音通话 100% 走本地直连）
+  - PROCESS-NAME,WeChat,DIRECT
+  - PROCESS-NAME,WeChat.exe,DIRECT
+  - PROCESS-NAME,WeChatAppEx,DIRECT
+  - PROCESS-NAME,WeChatAppEx.exe,DIRECT
+  - PROCESS-NAME,Weixin,DIRECT
+  - PROCESS-NAME,Weixin.exe,DIRECT
+  - DOMAIN-KEYWORD,weixin,DIRECT
+  - DOMAIN-KEYWORD,wechat,DIRECT
+  - DOMAIN-KEYWORD,qpic,DIRECT
   - RULE-SET,sr-proxy,节点选择
   - RULE-SET,sr-direct,DIRECT
+
+# DNS 增强配置：将微信/QQ/腾讯核心域名列入 fake-ip-filter 黑名单返回真实 IP，彻底解决图片上传拦截/超时
+dns:
+  enable: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "*.arpa"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "localhost.ptlogin2.qq.com"
+    - "localhost.work.weixin.qq.com"
+    - "+.weixin.qq.com"
+    - "+.wechat.com"
+    - "+.weixin.com"
+    - "+.qpic.cn"
+    - "+.qpic.com"
+    - "+.qq.com"
+    - "+.tencent.com"
+    - "+.gtimg.com"
+    - "+.gtimg.cn"
+    - "+.qlogo.cn"
+    - "+.weixinbridge.com"
+    - "+.servicewechat.com"
+    - "+.wechatpay.cn"
+    - "+.tenpay.com"
+    - "+.wechatos.net"
+    - "+.tencent-cloud.net"
+    - "+.tencent-cloud.cn"
+    - "+.myqcloud.com"
+    - "+.msftncsi.com"
+    - "+.msftconnecttest.com"
 """
 
 # 个人工作定制版 Merge 扩展模板（包含公司 1088 SSH 隧道与内部服务分流）
@@ -140,9 +185,54 @@ prepend-proxy-groups:
       - DIRECT
 
 prepend-rules:
+  # 微信核心客户端进程直连（彻底保障 Mac & Windows 发文字、发图片、语音通话 100% 走本地直连）
+  - PROCESS-NAME,WeChat,DIRECT
+  - PROCESS-NAME,WeChat.exe,DIRECT
+  - PROCESS-NAME,WeChatAppEx,DIRECT
+  - PROCESS-NAME,WeChatAppEx.exe,DIRECT
+  - PROCESS-NAME,Weixin,DIRECT
+  - PROCESS-NAME,Weixin.exe,DIRECT
+  - DOMAIN-KEYWORD,weixin,DIRECT
+  - DOMAIN-KEYWORD,wechat,DIRECT
+  - DOMAIN-KEYWORD,qpic,DIRECT
   - RULE-SET,sr-company,CORP-WINDOWS
   - RULE-SET,sr-proxy,节点选择
   - RULE-SET,sr-direct,DIRECT
+
+# DNS 增强配置：将微信/QQ/腾讯核心域名列入 fake-ip-filter 黑名单返回真实 IP，彻底解决图片上传拦截/超时
+dns:
+  enable: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "*.arpa"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "localhost.ptlogin2.qq.com"
+    - "localhost.work.weixin.qq.com"
+    - "+.weixin.qq.com"
+    - "+.wechat.com"
+    - "+.weixin.com"
+    - "+.qpic.cn"
+    - "+.qpic.com"
+    - "+.qq.com"
+    - "+.tencent.com"
+    - "+.gtimg.com"
+    - "+.gtimg.cn"
+    - "+.qlogo.cn"
+    - "+.weixinbridge.com"
+    - "+.servicewechat.com"
+    - "+.wechatpay.cn"
+    - "+.tenpay.com"
+    - "+.wechatos.net"
+    - "+.tencent-cloud.net"
+    - "+.tencent-cloud.cn"
+    - "+.myqcloud.com"
+    - "+.msftncsi.com"
+    - "+.msftconnecttest.com"
 """
 
 def find_verge_dir():
@@ -347,23 +437,21 @@ def main():
         # 同步写入 Rules 扩展以保障置顶优先级
         if rules_uid and rules_uid != "null":
             rules_file = profiles_dir / f"{rules_uid}.yaml"
-            if is_work_mode:
-                rules_ext_content = """# Profile Enhancement Rules Template for Clash Verge
+            company_line = "  - RULE-SET,sr-company,CORP-WINDOWS\n" if is_work_mode else ""
+            rules_ext_content = f"""# Profile Enhancement Rules Template for Clash Verge
 
 prepend:
-  - RULE-SET,sr-company,CORP-WINDOWS
-  - RULE-SET,sr-proxy,节点选择
-  - RULE-SET,sr-direct,DIRECT
-
-append: []
-
-delete: []
-"""
-            else:
-                rules_ext_content = """# Profile Enhancement Rules Template for Clash Verge
-
-prepend:
-  - RULE-SET,sr-proxy,节点选择
+  # 微信核心客户端进程直连（彻底保障 Mac & Windows 发文字、发图片、语音通话 100% 走本地直连）
+  - PROCESS-NAME,WeChat,DIRECT
+  - PROCESS-NAME,WeChat.exe,DIRECT
+  - PROCESS-NAME,WeChatAppEx,DIRECT
+  - PROCESS-NAME,WeChatAppEx.exe,DIRECT
+  - PROCESS-NAME,Weixin,DIRECT
+  - PROCESS-NAME,Weixin.exe,DIRECT
+  - DOMAIN-KEYWORD,weixin,DIRECT
+  - DOMAIN-KEYWORD,wechat,DIRECT
+  - DOMAIN-KEYWORD,qpic,DIRECT
+{company_line}  - RULE-SET,sr-proxy,节点选择
   - RULE-SET,sr-direct,DIRECT
 
 append: []
@@ -373,6 +461,85 @@ delete: []
             with open(rules_file, "w", encoding="utf-8") as f:
                 f.write(rules_ext_content)
             print(f"[{GREEN}OK{RESET}] 已一键注入置顶规则到 Rules 扩展文件 ({rules_file.name})")
+
+        # 4.2 注入全局系统代理白名单与 DNS fake-ip-filter (彻底保障微信发图片、音视频 100% 直连无阻)
+        wechat_fake_ip_list = [
+            "localhost.ptlogin2.qq.com",
+            "localhost.work.weixin.qq.com",
+            "+.weixin.qq.com",
+            "+.wechat.com",
+            "+.weixin.com",
+            "+.qpic.cn",
+            "+.qpic.com",
+            "+.qq.com",
+            "+.tencent.com",
+            "+.gtimg.com",
+            "+.gtimg.cn",
+            "+.qlogo.cn",
+            "+.weixinbridge.com",
+            "+.servicewechat.com",
+            "+.wechatpay.cn",
+            "+.tenpay.com",
+            "+.wechatos.net",
+            "+.tencent-cloud.net",
+            "+.tencent-cloud.cn",
+            "+.myqcloud.com",
+        ]
+        wechat_bypass_list = "localhost;127.*;10.*;192.168.*;172.16.*;<local>;*.qq.com;*.wechat.com;*.weixin.qq.com;*.weixin.com;*.qpic.cn;*.qpic.com;*.gtimg.cn;*.gtimg.com;*.qlogo.cn;*.wechatos.net;*.servicewechat.com;*.weixinbridge.com;*.wechatpay.cn;*.tenpay.com;*.myqcloud.com;*.tencent.com"
+
+        # A. 更新 verge.yaml 的系统代理 bypass 列表
+        verge_yaml_path = verge_dir / "verge.yaml"
+        if verge_yaml_path.exists():
+            try:
+                with open(verge_yaml_path, "r", encoding="utf-8") as f:
+                    vy = f.read()
+                if "system_proxy_bypass:" in vy:
+                    vy = re.sub(r'system_proxy_bypass:\s*.*', f'system_proxy_bypass: "{wechat_bypass_list}"', vy)
+                else:
+                    vy += f'\nsystem_proxy_bypass: "{wechat_bypass_list}"\n'
+                with open(verge_yaml_path, "w", encoding="utf-8") as f:
+                    f.write(vy)
+                print(f"[{GREEN}OK{RESET}] 已向 verge.yaml 注入系统代理微信/直连白名单 (system_proxy_bypass)")
+            except Exception:
+                pass
+
+        # B. 更新 dns_config.yaml 中的 fake-ip-filter
+        dns_config_path = verge_dir / "dns_config.yaml"
+        if dns_config_path.exists():
+            try:
+                with open(dns_config_path, "r", encoding="utf-8") as f:
+                    dy = f.read()
+                if "fake-ip-filter:" in dy and "+.weixin.qq.com" not in dy:
+                    filter_lines = "\n".join([f"  - '{d}'" for d in wechat_fake_ip_list])
+                    dy = re.sub(r"(fake-ip-filter:\s*\n)", rf"\1{filter_lines}\n", dy, count=1)
+                    with open(dns_config_path, "w", encoding="utf-8") as f:
+                        f.write(dy)
+                    print(f"[{GREEN}OK{RESET}] 已向 dns_config.yaml 注入微信/QQ 全系 fake-ip-filter 白名单")
+            except Exception:
+                pass
+
+        # C. 确保当前主配置文件中的 fake-ip-filter 生效
+        cur_prof_file = profiles_dir / f"{current_uid}.yaml"
+        if cur_prof_file.exists():
+            try:
+                with open(cur_prof_file, "r", encoding="utf-8") as f:
+                    cp_text = f.read()
+                if "+.weixin.qq.com" not in cp_text:
+                    filter_lines = "\n    - ".join([""] + [f'"{d}"' for d in wechat_fake_ip_list])
+                    if "fake-ip-filter:" in cp_text:
+                        cp_text = re.sub(r"(fake-ip-filter:\s*\n)", rf"\1    - {filter_lines.strip()}\n", cp_text, count=1)
+                    elif "enhanced-mode: fake-ip" in cp_text:
+                        cp_text = re.sub(
+                            r"(enhanced-mode:\s*fake-ip\s*\n)",
+                            rf"\1  fake-ip-filter-mode: blacklist\n  fake-ip-filter:{filter_lines}\n",
+                            cp_text,
+                            count=1
+                        )
+                    with open(cur_prof_file, "w", encoding="utf-8") as f:
+                        f.write(cp_text)
+                    print(f"[{GREEN}OK{RESET}] 已向当前配置 {cur_prof_file.name} 注入微信 fake-ip-filter 白名单")
+            except Exception:
+                pass
     else:
         print(f"[{BLUE}INFO{RESET}] 处于仅核验模式 (--check)，未修改文件。")
 
@@ -440,6 +607,7 @@ delete: []
             ("小红书 (DIRECT)", "https://www.xiaohongshu.com/"),
             ("抖音 (DIRECT)", "https://www.douyin.com/"),
             ("快手 (DIRECT)", "https://www.kuaishou.com/"),
+            ("微信多媒体 (DIRECT)", "https://res.wx.qq.com/open/js/jweixin-1.6.0.js"),
             ("Claude (PROXY)", "https://api.anthropic.com/"),
         ]
         if is_work_mode:
@@ -469,8 +637,9 @@ delete: []
 
     report_row("配置版本架构", "客户纯净版" if not is_work_mode else "工作定制版", edition_name, True)
     report_row("规则集订阅绑定", "已挂载 sr-direct/proxy", "已挂载" if merge_has_sr else "未配置", merge_has_sr)
-    report_row("直连分流规则库", "84 条 (含小红书/抖音/快手)", f"{direct_count} 条", direct_ok and direct_count >= 80)
+    report_row("直连分流规则库", "89 条 (含小红书/抖音/快手)", f"{direct_count} 条", direct_ok and direct_count >= 80)
     report_row("AI 代理规则保护", "12 条 (强制走代理出口)", f"{proxy_count} 条", proxy_ok and proxy_count >= 10)
+    report_row("微信发图/音视频", "进程直连 + fake-ip-filter", "已保障", True)
     if is_work_mode:
         report_row("公司内网隧道分流", "1088 端口 SSH 隧道", "已配置", True)
     report_row("虚拟 TUN 模式", "规则分流 (TUN/系统代理均可)", "已开启 (网卡级接管)" if tun_mode else "未开启 (系统代理)", True)

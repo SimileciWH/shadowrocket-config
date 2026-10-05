@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.09.27-3)
-# Change: route Russian destinations and VK via JustG; keep the default proxy
-# Total entries: 84
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-1)
+# Change: fully align WeChat image, voice, video, media direct rules, real-ip and proxy bypass
+# Total entries: 89
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -66,14 +66,19 @@ payload:
   - DOMAIN-SUFFIX,gifshow.com
   - DOMAIN-SUFFIX,ksapisrv.com
   - DOMAIN-SUFFIX,wskwai.com
+  - DOMAIN-KEYWORD,weixin
+  - DOMAIN-KEYWORD,wechat
+  - DOMAIN-KEYWORD,qpic
   - DOMAIN-SUFFIX,qq.com
   - DOMAIN-SUFFIX,qq.com.cn
+  - DOMAIN-SUFFIX,weixin.com
   - DOMAIN-SUFFIX,wechat.com
   - DOMAIN-SUFFIX,weixinbridge.com
   - DOMAIN-SUFFIX,servicewechat.com
   - DOMAIN-SUFFIX,wechatpay.cn
   - DOMAIN-SUFFIX,tenpay.com
   - DOMAIN-SUFFIX,qpic.cn
+  - DOMAIN-SUFFIX,qpic.com
   - DOMAIN-SUFFIX,wechatos.net
   - DOMAIN-SUFFIX,gtimg.cn
   - DOMAIN-SUFFIX,gtimg.com

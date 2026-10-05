@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.09.27-3)
-# Change: route Russian destinations and VK via JustG; keep the default proxy
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-1)
+# Change: fully align WeChat image, voice, video, media direct rules, real-ip and proxy bypass
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -153,15 +153,20 @@ rules:
   - DOMAIN-SUFFIX,gifshow.com,DIRECT
   - DOMAIN-SUFFIX,ksapisrv.com,DIRECT
   - DOMAIN-SUFFIX,wskwai.com,DIRECT
-  # WeChat / Tencent IM media direct
+  # WeChat / Tencent IM media direct (images, voice, video calls, file transfer)
+  - DOMAIN-KEYWORD,weixin,DIRECT
+  - DOMAIN-KEYWORD,wechat,DIRECT
+  - DOMAIN-KEYWORD,qpic,DIRECT
   - DOMAIN-SUFFIX,qq.com,DIRECT
   - DOMAIN-SUFFIX,qq.com.cn,DIRECT
+  - DOMAIN-SUFFIX,weixin.com,DIRECT
   - DOMAIN-SUFFIX,wechat.com,DIRECT
   - DOMAIN-SUFFIX,weixinbridge.com,DIRECT
   - DOMAIN-SUFFIX,servicewechat.com,DIRECT
   - DOMAIN-SUFFIX,wechatpay.cn,DIRECT
   - DOMAIN-SUFFIX,tenpay.com,DIRECT
   - DOMAIN-SUFFIX,qpic.cn,DIRECT
+  - DOMAIN-SUFFIX,qpic.com,DIRECT
   - DOMAIN-SUFFIX,wechatos.net,DIRECT
   - DOMAIN-SUFFIX,gtimg.cn,DIRECT
   - DOMAIN-SUFFIX,gtimg.com,DIRECT

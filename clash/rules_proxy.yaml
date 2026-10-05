@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: PROXY (Claude / Anthropic / AI)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.09.27-3)
-# Change: route Russian destinations and VK via JustG; keep the default proxy
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-1)
+# Change: fully align WeChat image, voice, video, media direct rules, real-ip and proxy bypass
 # Total entries: 12
 payload:
   - DOMAIN-SUFFIX,claude.ai

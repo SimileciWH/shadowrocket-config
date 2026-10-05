@@ -49,9 +49,54 @@ prepend-proxy-groups:
 
 # 优先匹配规则列表
 prepend-rules:
+  # 微信核心客户端进程直连（彻底保障 Mac & Windows 发文字、发图片、语音通话 100% 走本地直连）
+  - PROCESS-NAME,WeChat,DIRECT
+  - PROCESS-NAME,WeChat.exe,DIRECT
+  - PROCESS-NAME,WeChatAppEx,DIRECT
+  - PROCESS-NAME,WeChatAppEx.exe,DIRECT
+  - PROCESS-NAME,Weixin,DIRECT
+  - PROCESS-NAME,Weixin.exe,DIRECT
+  - DOMAIN-KEYWORD,weixin,DIRECT
+  - DOMAIN-KEYWORD,wechat,DIRECT
+  - DOMAIN-KEYWORD,qpic,DIRECT
   - RULE-SET,sr-company,CORP-WINDOWS
   - RULE-SET,sr-proxy,节点选择
   - RULE-SET,sr-direct,DIRECT
   - GEOIP,LAN,DIRECT,no-resolve
   - GEOIP,CN,DIRECT
   - MATCH,节点选择
+
+# DNS 增强配置：将微信/QQ/腾讯核心域名列入 fake-ip-filter 黑名单返回真实 IP，彻底解决图片上传拦截/超时
+dns:
+  enable: true
+  enhanced-mode: fake-ip
+  fake-ip-range: 198.18.0.1/16
+  fake-ip-filter-mode: blacklist
+  fake-ip-filter:
+    - "*.lan"
+    - "*.local"
+    - "*.arpa"
+    - "time.*.com"
+    - "ntp.*.com"
+    - "localhost.ptlogin2.qq.com"
+    - "localhost.work.weixin.qq.com"
+    - "+.weixin.qq.com"
+    - "+.wechat.com"
+    - "+.weixin.com"
+    - "+.qpic.cn"
+    - "+.qpic.com"
+    - "+.qq.com"
+    - "+.tencent.com"
+    - "+.gtimg.com"
+    - "+.gtimg.cn"
+    - "+.qlogo.cn"
+    - "+.weixinbridge.com"
+    - "+.servicewechat.com"
+    - "+.wechatpay.cn"
+    - "+.tenpay.com"
+    - "+.wechatos.net"
+    - "+.tencent-cloud.net"
+    - "+.tencent-cloud.cn"
+    - "+.myqcloud.com"
+    - "+.msftncsi.com"
+    - "+.msftconnecttest.com"

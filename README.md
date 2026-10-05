@@ -82,57 +82,15 @@ Mac 统一使用 `sr_ai_secure_final.conf`，不再维护独立的公司规则�
 * **客户纯净版**：使用 [`clash/client_merge_template.yaml`](clash/client_merge_template.yaml)
 * **个人工作版**：使用 [`clash/work_merge_template.yaml`](clash/work_merge_template.yaml)
 
-在 Clash Verge Rev 中打开 **订阅 (Profiles)** -> 找到你的主配置（如 `bwg-cal`）-> 右键选择 **编辑扩展配置 (Edit Merge)**，将 [`clash/clash_merge_template.yaml`](clash/clash_merge_template.yaml) 的内容粘贴保存即可：
+在 Clash Verge Rev 中打开 **订阅 (Profiles)** -> 找到你的主配置（如 `bwg-cal`）-> 右键选择 **编辑扩展配置 (Edit Merge)**，粘贴对应模板保存即可。
 
-```yaml
-rule-providers:
-  sr-direct:
-    type: http
-    behavior: classical
-    format: yaml
-    interval: 86400
-    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_direct.yaml"
-    path: ./ruleset/sr-direct.yaml
-
-  sr-proxy:
-    type: http
-    behavior: classical
-    format: yaml
-    interval: 86400
-    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_proxy.yaml"
-    path: ./ruleset/sr-proxy.yaml
-
-  sr-company:
-    type: http
-    behavior: classical
-    format: yaml
-    interval: 86400
-    url: "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash/rules_company.yaml"
-    path: ./ruleset/sr-company.yaml
-
-prepend-proxy-groups:
-  - name: CORP-WINDOWS
-    type: select
-    proxies:
-      - DIRECT
-      - 节点选择
-
-  - name: justg-vps-RU-direct
-    type: select
-    proxies:
-      - 节点选择
-      - DIRECT
-
-prepend-rules:
-  - RULE-SET,sr-company,CORP-WINDOWS
-  - RULE-SET,sr-proxy,节点选择
-  - RULE-SET,sr-direct,DIRECT
-  - GEOIP,LAN,DIRECT,no-resolve
-  - GEOIP,CN,DIRECT
-  - MATCH,节点选择
-```
-
-配置后，Clash Verge 启动系统代理即可无缝继承全量直连与分流规则，并在后台每 24h 自动静默拉取 GitHub 最新规则。
+#### 核心保障说明（与 Shadowrocket 完全对齐）：
+1. **微信发文字、发图片、音视频通话保障**：
+   - 注入微信核心进程直连规则（`WeChat` / `WeChat.exe` / `WeChatAppEx` / `Weixin`）与关键字直连。
+   - 配置 `dns.fake-ip-filter` 将微信、QQ、腾讯全系域名加入黑名单，返回真实 IP，彻底解决图片上传由于 Fake-IP 导致的拦截与超时。
+2. **小红书、抖音、快手等国内大厂全量直连**：
+   - 每 24h 自动静默从 CDN / GitHub 同步最新规则集。
+3. **Claude / OpenAI 敏感流量强制走代理**。
 
 ## Files
 
