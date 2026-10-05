@@ -49,6 +49,10 @@ class ProfileSyncTests(unittest.TestCase):
         self.assertNotIn('prepend-rules', merge)
         self.assertNotIn('prepend-proxy-groups', merge)
         self.assertIn('custom', merge['rule-providers'])
+        self.assertIs(merge['ipv6'], False)
+        self.assertEqual(merge['tun']['stack'], 'mixed')
+        self.assertEqual(merge['tun']['mtu'], 1500)
+        self.assertNotIn('enable', merge['tun'])
 
     def test_missing_file_does_not_choose_latest(self):
         (self.profiles / '1759600109019.yaml').unlink()

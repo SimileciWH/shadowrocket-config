@@ -1024,6 +1024,13 @@ def prepare_deployment(verge_dir, work=False):
     if "," in group or "\n" in group:
         raise ValueError("代理组名称包含规则分隔符，无法安全生成规则")
     generated = load_yaml((build_work_merge_content if work else build_client_merge_content)("SR_TARGET", ["PROXY", "节点选择"]))
+    # Fresh profiles need these defaults too; leave the UI's enable switch intact.
+    generated["ipv6"] = False
+    generated["tun"] = {
+        "stack": "mixed", "mtu": 1500, "auto-route": True,
+        "auto-detect-interface": True, "strict-route": False,
+        "dns-hijack": ["any:53", "tcp://any:53"],
+    }
     generated["prepend-rules"] = [rule.replace(",SR_TARGET", "," + group)
                                   for rule in generated["prepend-rules"]]
     options = profile.setdefault("option", {})
