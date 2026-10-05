@@ -20,19 +20,26 @@
 
 ---
 
-## 全场景使用总览 (Quick Start by Scenario)
+## 全场景使用总览 (Quick Start)
 
-### 场景一：发给外部客户 / 朋友电脑（客户通用纯净版，推荐）
+### 标准一键同步与配置（推荐，双端 100% 对齐）
 
-* **适用对象**：客户电脑、外部合作方、朋友电脑（支持 Windows 和 Mac）。
-* **安全承诺**：
-  * **0 隐私风险**：彻底剥离任何公司内网服务、私有节点及 SSH 隧道配置。
-  * **无损增量合并**：修改前自动创建 `.bak` 备份，**严格保留**客户原有的机场订阅和代理节点。
-  * **国内高速直连**：脚本与规则集托管于 jsDelivr CDN，免翻墙即可秒级拉取。
+* **适用对象**：日常办公、个人开发、客户与朋友电脑（支持 Windows 和 Mac）。
+* **功能特性**：
+  * **双端 100% 对齐**：与 Shadowrocket `sr_ai_secure_final.conf` 保持完全一致的规则逻辑。
+  * **微信全流程直连**：彻底解决 TUN 模式下微信发文字、发图片、大文件上传、音视频通话被卡住的问题。
+  * **TUN 路由互不干扰**：自动排除 Tailscale（`100.64.0.0/10`）与局域网网段，保护已有 VPN 和 SSH 隧道。
+  * **海外 AI 敏感代理**：Claude / OpenAI / Anthropic 强制稳定走代理出口。
+  * **内网无缝直连/分流**：包含 `CORP-WINDOWS` 出口策略组，自动容灾与回退。
+  * **无损增量合并**：修改前自动创建 `.bak` 备份，严格保留已有机场订阅和节点。
 
 #### 1. Mac 用户（终端 Terminal 执行单行命令）
 ```bash
+# 云端拉取执行：
 curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
+
+# 或本地仓库直接执行：
+python3 scripts/setup_clash_verge.py
 ```
 
 #### 2. Windows 用户（PowerShell 执行单行命令）
@@ -42,32 +49,12 @@ irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/s
 ```
 *(如遇脚本受限，也可使用全平台通用指令：`python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"`)*
 
-#### 3. 客户生效确认（仅需 2 步）：
+#### 3. 生效确认（仅需 2 步）：
 1. 打开 Clash Verge Rev，激活当前配置：
    * 若配置为 **远程订阅链接导入**：右键点击该配置 -> 选择 **“刷新 (Refresh)”**。
    * 若配置为 **本地文件导入 (Local)**：直接点击该配置卡片切换一下（或右键选择 **“Select”**）。
-2. 确保代理模式为 **`规则 (Rule)`**（禁止使用 Global 全局），开启 **`TUN 模式`** 或 **`系统代理 (System Proxy)`** 均可，此时微信发图/大文件、视频剪辑、海外 AI 均已全线打通！
-
----
-
-### 场景二：个人工作电脑（工作定制版，带公司内网隧道）
-
-* **适用对象**：个人开发与办公电脑（需访问公司内网、Jenkins、内部代码仓）。
-* **功能特性**：自动挂载 `127.0.0.1:1088` SSH 隧道节点，将 `realtek.com`、`realsil.com.cn`、`rtkbf.com` 及内网 IP 自动分流到 `CORP-WINDOWS` 出口。
-
-#### 1. Mac / Linux 终端：
-```bash
-# 云端拉取执行：
-curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3 - --work
-
-# 或本地仓库直接执行：
-python3 scripts/setup_clash_verge.py --work
-```
-
-#### 2. Windows PowerShell：
-```powershell
-irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python - --work
-```
+2. 确保代理模式为 **`规则 (Rule)`**（禁止使用 Global 全局），开启 **`TUN 模式`** 或 **`系统代理 (System Proxy)`** 均可。
+*(注：如需剥离公司内网规则的精简版，在上述命令末尾加上 `--client` 即可)*
 
 ---
 

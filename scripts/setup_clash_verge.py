@@ -971,6 +971,7 @@ delete: []
         with open(profiles_yaml_path, "w", encoding="utf-8") as f:
             f.write(profiles_content)
 
+    if not check_only:
         # 4.2 增量合并系统代理白名单与 DNS fake-ip-filter (微信发图 + 抖音视频 Real-IP 100% 直连无阻)
         # A. 更新 verge.yaml 的系统代理 bypass 列表
         verge_yaml_path = verge_dir / "verge.yaml"
