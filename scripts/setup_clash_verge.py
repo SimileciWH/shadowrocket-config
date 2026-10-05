@@ -1147,6 +1147,11 @@ def prepare_deployment(verge_dir, work=False):
     validation = "候选引用检查通过"
     if core:
         with tempfile.TemporaryDirectory(prefix="sr-check-") as temp:
+            # Reuse installed geodata instead of downloading it into every candidate.
+            for filename in ("Country.mmdb", "ASN.mmdb", "geoip.dat", "geosite.dat", "GeoSite.dat"):
+                installed = verge_dir / filename
+                if installed.is_file():
+                    shutil.copyfile(installed, Path(temp) / filename)
             if snapshot:
                 for name, provider in candidate.get("rule-providers", {}).items():
                     if name in generated["rule-providers"]:

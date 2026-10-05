@@ -55,6 +55,21 @@ class ProfileSyncTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.plan()
 
+    def test_candidate_reuses_installed_geo_data_without_mutating_it(self):
+        geo = self.root / 'geosite.dat'
+        geo.write_bytes(b'installed-geosite-data')
+
+        def validate(command, **kwargs):
+            directory = Path(command[command.index('-d') + 1])
+            self.assertEqual((directory / 'geosite.dat').read_bytes(), geo.read_bytes())
+            self.assertNotEqual(directory, self.root)
+            return setup.subprocess.CompletedProcess(command, 0)
+
+        with patch.dict(setup.os.environ, {'CLASH_MIHOMO_BIN': '/test/core'}), patch.object(setup.subprocess, 'run', side_effect=validate):
+            plan = setup.prepare_deployment(self.root)
+        self.assertEqual(geo.read_bytes(), b'installed-geosite-data')
+        self.assertNotIn(geo, plan['updates'])
+
     def test_missing_current_fails_without_writing(self):
         self.index['current'] = 'missing'
         self.write(self.root / 'profiles.yaml', self.index)

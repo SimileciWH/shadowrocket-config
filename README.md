@@ -79,6 +79,8 @@ $ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent
 
 发布规范及环境依赖见 [同步与验收说明](scripts/README_clash_profile_sync.md)。
 
+Windows 多机部署可使用 [Windows 部署脚本与验收说明](scripts/README_windows_deployment.md)：自动补齐 PyYAML 和后台服务、调用上述正式入口，并对齐会覆盖 Merge 的基础设置。需要先安装客户端并选中订阅；脚本完成后仍须验收实际网络。
+
 #### 3. 客户生效确认：
 1. 打开 Clash Verge Rev，激活当前配置：
    * 本地和远程订阅均重新选择当前配置（Select），让应用重新生成配置并加载扩展；检查无校验红框。
