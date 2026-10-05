@@ -341,6 +341,7 @@ def build_client_merge_content(main_group: str = "节点选择") -> str:
 ipv6: false
 
 # TUN 虚拟网卡深度优化：彻底解决 macOS / Windows 上微信大文件、多媒体图片上传 hang 住问题
+# 严格对齐 Shadowrocket bypass-tun，排除 Tailscale (100.64.0.0/10) 与局域网网段，防止劫持私有 VPN/虚拟网卡
 tun:
   enable: true
   stack: mixed
@@ -352,6 +353,14 @@ tun:
   strict-route: false
   mtu: 1500
   endpoint-independent-nat: true
+  route-exclude-address:
+    - 100.64.0.0/10
+    - 111.231.15.226/32
+    - 127.0.0.0/8
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.0.0/16
 
 rule-providers:
   sr-direct:
@@ -488,6 +497,7 @@ def build_work_merge_content(main_group: str = "节点选择") -> str:
 ipv6: false
 
 # TUN 虚拟网卡深度优化：彻底解决 macOS / Windows 上微信大文件、多媒体图片上传 hang 住问题
+# 严格对齐 Shadowrocket bypass-tun，排除 Tailscale (100.64.0.0/10) 与局域网网段，防止劫持公司跳板机隧道
 tun:
   enable: true
   stack: mixed
@@ -499,6 +509,14 @@ tun:
   strict-route: false
   mtu: 1500
   endpoint-independent-nat: true
+  route-exclude-address:
+    - 100.64.0.0/10
+    - 111.231.15.226/32
+    - 127.0.0.0/8
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+    - 192.168.0.0/16
+    - 169.254.0.0/16
 
 rule-providers:
   sr-direct:
