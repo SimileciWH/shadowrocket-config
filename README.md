@@ -36,12 +36,21 @@
 curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
 ```
 
-#### 2. Windows 用户（PowerShell 执行单行命令）
+#### 2. Windows 用户（PowerShell 执行单行命令，任选其一）
 按快捷键 `Win + X` 打开 **Windows PowerShell**，粘贴并回车：
-```powershell
-irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
-```
-*(如遇脚本受限，也可使用全平台通用指令：`python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"`)*
+
+* **方式 1（推荐，写入临时文件执行，彻底避免管道编码乱码）：**
+  ```powershell
+  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py
+  ```
+* **方式 2（跨平台纯 Python 指令，全系统通用）：**
+  ```powershell
+  python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
+  ```
+* **方式 3（单行管道执行，需前置声明 UTF-8 输出编码）：**
+  ```powershell
+  $OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
+  ```
 
 #### 3. 客户生效确认（仅需 2 步）：
 1. 打开 Clash Verge Rev，激活当前配置：
@@ -69,7 +78,11 @@ python3 scripts/setup_clash_verge.py --work
 
 #### 2. Windows PowerShell：
 ```powershell
-irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python - --work
+# 推荐执行：
+irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py --work
+
+# 或纯 Python 通用执行：
+python -c "import sys, urllib.request; sys.argv.append('--work'); exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
 ```
 
 ---
@@ -161,6 +174,16 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
   dig @127.0.0.1 -p 1053 v.douyin.com +short
   ```
   若返回形如 `117.68.x.x` 或 `155.102.x.x` 的公网地址（而非 `198.18.x.x`），即表示 Real-IP 已成功生效。
+
+### Q6: Windows 执行提示 `Proxy CONNECT aborted` 或 `未找到数据目录`？
+- **`curl: (56) Proxy CONNECT aborted` 解决**：
+  * 说明 Windows 系统代理中残留了已失效的旧端口设置。
+  * **解决**：改用 PowerShell 原生推荐命令 `irm ... -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py`，或在 Windows **设置 -> 网络和 Internet -> 代理** 中关闭手动代理开关。
+- **`未找到 Clash Verge Rev 数据目录` 或 `未找到 profiles.yaml` 解决**：
+  * **原因 1（初次安装未运行）**：刚安装好客户端，但从未双击打开过（Clash Verge Rev 只有在初次启动时才会自动生成 AppData 基础目录）。
+  * **原因 2（未导入节点订阅）**：打开了客户端，但在【配置 (Profiles)】中尚未添加任何机场订阅。
+  * **解决**：先双击打开一次 Clash Verge Rev，在【配置 (Profiles)】中导入您的订阅链接并点击选中激活，然后重新运行本脚本即可！
+  * **便携绿色版用户**：若使用的是解压版且安装在自定义路径，可直接指定 `--dir` 参数运行（如 `python setup_clash.py --dir "C:\你的路径\config"`）。
 
 ---
 

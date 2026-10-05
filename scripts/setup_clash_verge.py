@@ -21,15 +21,15 @@ Clash Verge Rev 一键配置与环境一致性核验工具 (Shadowrocket 环境�
 任意 Mac / Linux 终端单行执行（免梯子直连、全自动化）：
   curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
 
-Windows PowerShell 终端单行执行（任选其一）：
-  # 方式 1（PowerShell 原生，推荐）：
-  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
+Windows PowerShell 终端单行执行（任选其一，推荐方式 1 或方式 2）：
+  # 方式 1（PowerShell 推荐，原生写入临时文件执行，完美避免管道与编码问题）：
+  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py
 
-  # 方式 2（使用 curl.exe，注意加 .exe）：
-  curl.exe -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
-
-跨平台纯 Python 指令（全系统通用）：
+  # 方式 2（跨平台纯 Python 单行指令，全系统通用）：
   python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
+
+  # 方式 3（使用 curl.exe，添加 --noproxy "*" 防止受系统无效代理残留影响）：
+  curl.exe --noproxy "*" -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
 """
 
 import os
@@ -42,6 +42,29 @@ import subprocess
 import urllib.request
 import urllib.error
 from pathlib import Path
+
+# Windows 控制台编码与虚拟终端 ANSI 颜色适配（彻底杜绝 cp936 / cp1252 乱码及问号 ???）
+if sys.platform == "win32":
+    try:
+        import ctypes
+        # 设置控制台代码页为 UTF-8 (65001)
+        ctypes.windll.kernel32.SetConsoleOutputCP(65001)
+        ctypes.windll.kernel32.SetConsoleCP(65001)
+        # 启用 ANSI 颜色序列支持 (ENABLE_VIRTUAL_TERMINAL_PROCESSING = 0x0004)
+        handle = ctypes.windll.kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_ulong()
+        if ctypes.windll.kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            ctypes.windll.kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+    except Exception:
+        pass
+    try:
+        import io
+        if hasattr(sys.stdout, "buffer"):
+            sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+        if hasattr(sys.stderr, "buffer"):
+            sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 # ANSI 颜色定义
 GREEN = "\033[92m"
@@ -669,39 +692,161 @@ CLIENT_MERGE_CONTENT = build_client_merge_content("节点选择")
 WORK_MERGE_CONTENT = build_work_merge_content("节点选择")
 
 
+def get_custom_dir_arg():
+    for i, arg in enumerate(sys.argv):
+        if arg in ("--dir", "-d", "--path") and i + 1 < len(sys.argv):
+            return Path(sys.argv[i + 1])
+        if arg.startswith("--dir=") or arg.startswith("--path="):
+            return Path(arg.split("=", 1)[1].strip("'\""))
+    if "CLASH_VERGE_DIR" in os.environ:
+        return Path(os.environ["CLASH_VERGE_DIR"])
+    return None
+
 def find_verge_dir():
+    """
+    智能定位 Clash Verge Rev 数据目录，返回 (Path, status)。
+    status 可取值:
+      - "ok": 成功找到目录且 profiles.yaml 存在
+      - "no_profiles": 找到了有效数据目录（存在 verge.yaml/clash-verge.yaml 等），但尚未生成 profiles.yaml
+      - "empty_dir": 找到了候选目录，但目录为空
+      - "custom_not_found": 用户指定的 --dir 不存在
+      - "not_found": 候选目录均未匹配到
+    """
+    custom_dir = get_custom_dir_arg()
+    if custom_dir:
+        if custom_dir.is_dir():
+            if (custom_dir / "profiles.yaml").exists():
+                return custom_dir, "ok"
+            elif any((custom_dir / f).exists() for f in ["verge.yaml", "clash-verge.yaml", "config.yaml"]):
+                return custom_dir, "no_profiles"
+            return custom_dir, "ok"
+        return None, "custom_not_found"
+
     appdata = os.environ.get("APPDATA")
     localappdata = os.environ.get("LOCALAPPDATA")
+    userprofile = os.environ.get("USERPROFILE") or str(Path.home())
+    prog_files = os.environ.get("ProgramFiles")
+    prog_files_x86 = os.environ.get("ProgramFiles(x86)")
+
     candidates = [
-        # macOS
+        # macOS 常见路径
         Path.home() / "Library" / "Application Support" / "io.github.clash-verge-rev.clash-verge-rev",
         Path.home() / "Library" / "Application Support" / "clash-verge-rev",
         Path.home() / "Library" / "Application Support" / "clash-verge",
+        Path.home() / "Library" / "Application Support" / "Clash Verge Rev",
         # Linux / portable
         Path.home() / ".config" / "clash-verge-rev",
         Path.home() / ".config" / "clash-verge",
         Path.home() / ".config" / "io.github.clash-verge-rev.clash-verge-rev",
     ]
-    # Windows
+
+    sub_names = [
+        "io.github.clash-verge-rev.clash-verge-rev",
+        "clash-verge-rev",
+        "Clash Verge Rev",
+        "clash-verge",
+        "Clash Verge",
+        "clash_verge_rev",
+        "clash_verge",
+    ]
+
+    # Windows 目录
     if appdata:
         appdata_path = Path(appdata)
-        candidates.extend([
-            appdata_path / "io.github.clash-verge-rev.clash-verge-rev",
-            appdata_path / "clash-verge-rev",
-            appdata_path / "clash-verge",
-        ])
+        for name in sub_names:
+            candidates.append(appdata_path / name)
     if localappdata:
         local_path = Path(localappdata)
-        candidates.extend([
-            local_path / "io.github.clash-verge-rev.clash-verge-rev",
-            local_path / "clash-verge-rev",
-            local_path / "clash-verge",
-        ])
+        for name in sub_names:
+            candidates.append(local_path / name)
+            candidates.append(local_path / "Programs" / name)
+            candidates.append(local_path / "Programs" / name / "config")
+            candidates.append(local_path / "Programs" / name / "data")
+    if userprofile:
+        up = Path(userprofile)
+        for name in sub_names:
+            candidates.append(up / ".config" / name)
+        # 扫描用户 Downloads 与 Desktop 下的便携解压目录
+        for folder in [up / "Downloads", up / "Desktop"]:
+            if folder.exists():
+                try:
+                    for sub in folder.iterdir():
+                        if sub.is_dir() and any(k in sub.name.lower() for k in ["clash", "verge"]):
+                            candidates.append(sub)
+                            candidates.append(sub / "config")
+                            candidates.append(sub / "data")
+                            candidates.append(sub / ".config")
+                except Exception:
+                    pass
 
+    if prog_files:
+        pf = Path(prog_files)
+        for name in sub_names:
+            candidates.append(pf / name)
+            candidates.append(pf / name / "config")
+            candidates.append(pf / name / "data")
+    if prog_files_x86:
+        pfx = Path(prog_files_x86)
+        for name in sub_names:
+            candidates.append(pfx / name)
+            candidates.append(pfx / name / "config")
+            candidates.append(pfx / name / "data")
+
+    # 尝试从 Windows 正在运行的进程提取路径 (针对免配置便携版定位)
+    if sys.platform == "win32":
+        try:
+            ps_cmd = [
+                "powershell", "-NoProfile", "-Command",
+                "Get-Process | Where-Object { $_.ProcessName -match 'verge|clash|mihomo' } | Select-Object -ExpandProperty Path -ErrorAction SilentlyContinue"
+            ]
+            res = subprocess.run(ps_cmd, capture_output=True, text=True, timeout=4)
+            if res.returncode == 0 and res.stdout:
+                for line in res.stdout.splitlines():
+                    p = Path(line.strip())
+                    if p.is_file():
+                        p_dir = p.parent
+                        for sub in [p_dir / "config", p_dir / "data", p_dir / ".config", p_dir]:
+                            candidates.insert(0, sub)
+        except Exception:
+            pass
+
+    # 去重
+    unique_candidates = []
+    seen = set()
     for c in candidates:
-        if c.exists() and (c / "profiles.yaml").exists():
-            return c
-    return None
+        try:
+            p_str = str(c)
+            if p_str not in seen:
+                seen.add(p_str)
+                unique_candidates.append(c)
+        except Exception:
+            pass
+
+    # 1. 优先选择包含 profiles.yaml 的目录
+    for c in unique_candidates:
+        try:
+            if c.exists() and (c / "profiles.yaml").exists():
+                return c, "ok"
+        except Exception:
+            pass
+
+    # 2. 其次选择包含 verge.yaml / clash-verge.yaml / config.yaml 的目录
+    for c in unique_candidates:
+        try:
+            if c.exists() and any((c / f).exists() for f in ["verge.yaml", "clash-verge.yaml", "config.yaml"]):
+                return c, "no_profiles"
+        except Exception:
+            pass
+
+    # 3. 再次选择已存在的候选目录
+    for c in unique_candidates:
+        try:
+            if c.exists() and c.is_dir():
+                return c, "empty_dir"
+        except Exception:
+            pass
+
+    return None, "not_found"
 
 def fetch_single_url(url, timeout=5):
     req = urllib.request.Request(
@@ -798,25 +943,51 @@ def main():
     print(f"[{BLUE}MODE{RESET}] 当前配置目标: {BOLD}{edition_name}{RESET} -> {edition_tip}")
 
     # 1. 寻找 Clash Verge Rev 数据目录
-    verge_dir = find_verge_dir()
-    if not verge_dir:
-        print(f"[{RED}FAIL{RESET}] 未找到 Clash Verge Rev 数据目录。")
-        print(f"       请确认本机已安装并启动过 Clash Verge Rev。")
+    verge_dir, dir_status = find_verge_dir()
+    if dir_status == "custom_not_found":
+        custom_arg = get_custom_dir_arg()
+        print(f"[{RED}FAIL{RESET}] 无法找到指定的配置目录: {custom_arg}")
+        print(f"       请检查路径拼写是否正确。")
+        sys.exit(1)
+
+    if dir_status == "not_found" or not verge_dir:
+        print(f"[{RED}FAIL{RESET}] 未能自动定位到 Clash Verge Rev 数据目录。")
+        print(f"\n{BOLD}排查与解决指引：{RESET}")
+        print(f"  1. 【初次安装未运行】：如果刚在电脑上安装完客户端，请先【双击打开运行一次】Clash Verge Rev。")
+        print(f"     （客户端初次启动时才会自动生成 AppData 基础数据目录）")
+        print(f"  2. 【便携绿色版 / 自定义安装路径】：若使用解压即用的便携版，请通过参数指定其数据目录，例如：")
+        if sys.platform == "win32":
+            print(f"     python setup_clash_verge.py --dir \"C:\\你的路径\\config\"")
+            print(f"     或 irm <url> -OutFile $env:TEMP\\setup.py; python $env:TEMP\\setup.py --dir \"C:\\你的路径\\config\"")
+        else:
+            print(f"     python3 scripts/setup_clash_verge.py --dir \"/path/to/clash-verge-dir\"")
+        sys.exit(1)
+
+    if dir_status == "empty_dir":
+        print(f"[{YELLOW}WARN{RESET}] 探测到目录: {verge_dir}，但目录为空。")
+        print(f"       请先打开一次 Clash Verge Rev，并在界面中导入一个订阅配置。")
         sys.exit(1)
 
     print(f"[{GREEN}OK{RESET}] 定位到 Clash Verge Rev 数据目录: {verge_dir}")
 
     # 2. 读取 profiles.yaml 识别所有配置（包括当前配置与备用配置，如 justg, bwg-cal 等）
     profiles_yaml_path = verge_dir / "profiles.yaml"
+    if not profiles_yaml_path.exists():
+        print(f"[{RED}FAIL{RESET}] 目录中未找到 profiles.yaml 配置文件！")
+        print(f"\n{BOLD}排查与解决指引：{RESET}")
+        print(f"  👉 原因：Clash Verge Rev 刚安装启动，但【配置 (Profiles)】中尚未添加任何代理节点或订阅。")
+        print(f"  👉 解决步骤：")
+        print(f"     1. 打开 Clash Verge Rev 界面；")
+        print(f"     2. 点击左侧【配置 (Profiles)】菜单，导入您的机场订阅链接（或添加一个本地配置）；")
+        print(f"     3. 导入后在列表中点击选中该配置；")
+        print(f"     4. 重新执行本同步脚本即可完成一键对齐与规则注入！\n")
+        sys.exit(1)
+
     with open(profiles_yaml_path, "r", encoding="utf-8") as f:
         profiles_content = f.read()
 
     current_match = re.search(r"^current:\s*([a-zA-Z0-9_-]+)", profiles_content, re.MULTILINE)
     current_uid = current_match.group(1).strip() if current_match else None
-
-    if not current_uid:
-        print(f"[{RED}FAIL{RESET}] 未在 profiles.yaml 中找到激活配置 (current)。")
-        sys.exit(1)
 
     profiles_dir = verge_dir / "profiles"
     if not profiles_dir.exists():
@@ -845,6 +1016,22 @@ def main():
                 "block": p_block,
                 "is_current": (p_uid == current_uid)
             })
+
+    if not profile_items:
+        print(f"[{RED}FAIL{RESET}] profiles.yaml 中配置列表为空 (未导入任何订阅)。")
+        print(f"       请打开 Clash Verge Rev，在【配置 (Profiles)】中导入机场订阅链接后再次运行。")
+        sys.exit(1)
+
+    profiles_yaml_modified = False
+    if not current_uid or current_uid in ("null", "~", "None", ""):
+        current_uid = profile_items[0]["uid"]
+        profile_items[0]["is_current"] = True
+        print(f"[{YELLOW}WARN{RESET}] 当前未激活任何配置，自动选中检测到的第一个配置: {profile_items[0]['name']} [UID: {current_uid}]")
+        if re.search(r"^current:.*", profiles_content, re.MULTILINE):
+            profiles_content = re.sub(r"^current:.*", f"current: {current_uid}", profiles_content, flags=re.MULTILINE)
+        else:
+            profiles_content = f"current: {current_uid}\n" + profiles_content
+        profiles_yaml_modified = True
 
     print(f"[{GREEN}OK{RESET}] 在 profiles.yaml 中发现 {len(profile_items)} 个配置项:")
     for pi in profile_items:
@@ -1112,22 +1299,42 @@ delete: []
 
     # 7. 检测系统代理残留状态 (例如旧的 1082)
     import socket
-    try:
-        sc_out = subprocess.run(["scutil", "--proxy"], capture_output=True, text=True).stdout
-        if "HTTPEnable : 1" in sc_out:
-            port_m = re.search(r"HTTPPort\s*:\s*(\d+)", sc_out)
-            sys_port = int(port_m.group(1)) if port_m else None
-            if sys_port and sys_port != mixed_port:
-                # 检查该残留端口是否死掉
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.settimeout(0.3)
-                    dead = (s.connect_ex(("127.0.0.1", sys_port)) != 0)
-                if dead:
-                    print(f"[{YELLOW}WARN{RESET}] 检测到 macOS 系统代理当前指向已关闭的旧端口 {sys_port}（如 Shadowrocket 退出残留）！")
-                    print(f"       会导致终端 curl 报 'Failed to connect after 2 ms'。")
-                    print(f"       {BOLD}解决办法：请在 Clash Verge Rev 界面开启【系统代理 (System Proxy)】以覆盖为 {mixed_port}。{RESET}")
-    except Exception:
-        pass
+    if sys.platform != "win32":
+        try:
+            sc_out = subprocess.run(["scutil", "--proxy"], capture_output=True, text=True).stdout
+            if "HTTPEnable : 1" in sc_out:
+                port_m = re.search(r"HTTPPort\s*:\s*(\d+)", sc_out)
+                sys_port = int(port_m.group(1)) if port_m else None
+                if sys_port and sys_port != mixed_port:
+                    # 检查该残留端口是否死掉
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                        s.settimeout(0.3)
+                        dead = (s.connect_ex(("127.0.0.1", sys_port)) != 0)
+                    if dead:
+                        print(f"[{YELLOW}WARN{RESET}] 检测到 macOS 系统代理当前指向已关闭的旧端口 {sys_port}（如 Shadowrocket 退出残留）！")
+                        print(f"       会导致终端 curl 报 'Failed to connect after 2 ms'。")
+                        print(f"       {BOLD}解决办法：请在 Clash Verge Rev 界面开启【系统代理 (System Proxy)】以覆盖为 {mixed_port}。{RESET}")
+        except Exception:
+            pass
+    else:
+        try:
+            reg_cmd = ["reg", "query", r"HKCU\Software\Microsoft\Windows\CurrentVersion\Internet Settings"]
+            reg_out = subprocess.run(reg_cmd, capture_output=True, text=True).stdout
+            if "ProxyEnable    REG_DWORD    0x1" in reg_out:
+                ps_m = re.search(r"ProxyServer\s+REG_SZ\s+(.+)", reg_out)
+                if ps_m:
+                    server_str = ps_m.group(1).strip()
+                    host_port = server_str.split(";")[-1].split("=")[-1]
+                    if ":" in host_port:
+                        h, p = host_port.split(":")
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                            s.settimeout(0.5)
+                            if s.connect_ex((h, int(p))) != 0:
+                                print(f"[{YELLOW}WARN{RESET}] 检测到 Windows 系统代理指向失效地址: {server_str}")
+                                print(f"       会导致 curl 报 'Proxy CONNECT aborted'。")
+                                print(f"       {BOLD}解决办法：请在 Windows 设置 -> 网络和 Internet -> 代理 中关闭手动代理，或在 Clash Verge Rev 中重新开启【系统代理】覆盖。{RESET}")
+        except Exception:
+            pass
 
     # 8. 探测 Clash 代理端口是否正在监听
     port_listening = False
