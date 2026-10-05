@@ -22,14 +22,44 @@
 
 ## 全场景使用总览 (Quick Start by Scenario)
 
+先按**用途**选择模式，再按**操作系统**选择命令。Windows / Mac / Linux 不决定 work 模式，脚本不会根据电脑名称、账号或上次执行记录自动判断。
+
+| 电脑 / 使用场景 | 选择 | 参数 | 说明 |
+|---|---|---|---|
+| 客户、朋友、普通个人电脑（Windows / Mac / Linux） | 非 work | 不加模式参数 | 不添加公司规则源和 1088 隧道节点 |
+| 需要公司内网的工作电脑（Windows / Mac / Linux） | work | `--work` | 添加公司分流；需要另行建立本机 1088 SOCKS 隧道 |
+| 只做 ClipVault、短视频下载，不访问公司内网 | 非 work | 不加模式参数 | 不因用途是开发而自动开启 work |
+| 便携版 / 多套 Clash 数据目录 | 在上面模式基础上指定目录 | `--dir "实际数据目录"` | 指向包含 `profiles.yaml` 的目录，不是应用安装目录 |
+| 只检查普通配置 | 非 work 候选检查 | `--check` | 不修改 Clash 配置 |
+| 只检查工作配置 | work 候选检查 | `--work --check` | 不修改 Clash 配置 |
+| 只验证线上版本是否完整 | 下载验证 | `--download-only` | 不执行安装器，不需要本机 Clash |
+| Shadowrocket 手机 / 平板 | 使用场景五 | 不用 Python 参数 | 在 Shadowrocket 中更新配置 |
+
+**每次更新都要带对参数**：工作电脑后续更新仍需 `--work`，默认不记忆上次模式。每次只更新指定数据目录中**当前激活的订阅**；多个订阅需要逐个激活后执行。同名订阅按 UID 区分。
+
+**首次准备**：先安装 Clash Verge Rev、打开一次并导入/选中订阅，再关闭应用执行同步，最后重新打开并选择订阅。更新入口不会安装 Python、Clash 或创建公司 SSH 隧道。
+
+Windows 需可用的 `python` 和 PyYAML；若系统使用 `py -3`，将下文所有 `python` 换成 `py -3`。可以先执行：
+
+```powershell
+python --version
+python -m pip install PyYAML
+```
+
+Windows / Linux 内核若不在 PATH，需要设置 `CLASH_MIHOMO_BIN` 为实际内核路径。Windows 示例（请替换路径，不能照抄占位目录）：
+
+```powershell
+$env:CLASH_MIHOMO_BIN = 'C:\实际安装目录\verge-mihomo.exe'
+```
+
+macOS 自动检测标准安装路径；其他路径同样可以指定。找不到内核会停止，不会跳过校验。已完成 macOS 真实内核与 Linux CI 测试；Windows 安装和桌面流程仍需实机验收。
+
 ### 场景一：发给外部客户 / 朋友电脑（客户通用纯净版，默认推荐）
 
 * **适用对象**：客户电脑、外部合作方、朋友电脑（支持 Windows 和 Mac）。
-* **安全承诺**：
-  * **0 隐私风险**：**默认彻底剥离任何公司内网信息**（不含 realtek/realsil/rtkbf 规则及公司隧道节点），绝对不泄漏公司私密。
-  * **微信全流程直连**：彻底解决 TUN 模式下微信发文字、发图片、大文件上传被卡住的问题。
-  * **无损增量合并**：修改前创建独立的 `sr-backup-*` 备份目录，**严格保留**客户原有的机场订阅和代理节点。
-  * **国内高速直连**：通过 GitHub 确认版本，通过 CDN 或 GitHub 下载同版本文件；可用性取决于当地网络。
+* **配置范围**：默认添加客户版规则，不新增公司 provider 或隧道节点；保留原订阅和客户自定义配置。默认模式不是清理或脱敏工具，曾使用工作配置的电脑可能保留已有公司节点或组。
+* **备份与检查**：写入前创建 `sr-backup-*` 备份并校验候选，实际应用加载及网络结果需单独确认。
+* **下载方式**：通过 GitHub 确认版本，经 CDN 或 GitHub 下载同版本文件；可用性取决于当地网络。
 
 #### 1. Mac / Linux 用户
 
@@ -49,11 +79,11 @@ $ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent
 
 发布规范及环境依赖见 [同步与验收说明](scripts/README_clash_profile_sync.md)。
 
-#### 3. 客户生效确认（仅需 2 步）：
+#### 3. 客户生效确认：
 1. 打开 Clash Verge Rev，激活当前配置：
-   * 若配置为 **远程订阅链接导入**：右键点击该配置 -> 选择 **“刷新 (Refresh)”**。
-   * 若配置为 **本地文件导入 (Local)**：直接点击该配置卡片切换一下（或右键选择 **“Select”**）。
-2. 确保代理模式为 **`规则 (Rule)`**（禁止使用 Global 全局），开启 **`TUN 模式`** 或 **`系统代理 (System Proxy)`** 均可。
+   * 本地和远程订阅均重新选择当前配置（Select），让应用重新生成配置并加载扩展；检查无校验红框。
+2. 确保代理模式为 **`规则 (Rule)`**，按需要开启 **`TUN 模式`** 或 **`系统代理 (System Proxy)`**。
+3. 在浏览器访问目标网站，确认实际可用；终端文件写入成功不等于网络验收通过。
 
 ---
 
@@ -62,7 +92,7 @@ $ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent
 * **适用对象**：个人开发与办公电脑（需访问公司内网、Jenkins、内部代码仓）。
 * **功能特性**：
   * 自动挂载 `127.0.0.1:1088` SSH 隧道节点，将 `realtek.com`、`realsil.com.cn`、`rtkbf.com` 及内网 IP 自动分流到 `CORP-WINDOWS` 出口。
-  * TUN 虚拟网卡自动排除 Tailscale（`100.64.0.0/10`）与局域网网段，防止劫持公司跳板机隧道。
+  * 脚本不创建 SSH 隧道，也不保证 TUN 自动排除 Tailscale；使用公司隧道前需单独验证路由和 1088 监听状态。
 
 #### 1. Mac / Linux 终端
 
@@ -100,18 +130,19 @@ $ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent
 
 ---
 
-### 场景四：仅环境健康检查（只读体检模式，不改动任何文件）
+### 场景四：仅环境健康检查（不修改 Clash 配置）
 
-* **适用对象**：想先检查当前 Clash 与基准规则的一致性，不想改动任何配置文件。
-* **执行命令**：
-  ```bash
-  python3 scripts/setup_clash_verge.py --check
-  ```
-* **检查维度**：
-  * 检测云端规则集（GitHub Raw / CDN 镜像）网络可达性与规则条数。
-  * 探测小红书、抖音、快手、微信多媒体及 Claude 的实时分流响应。
-  * 拨测核心域名是否仍被 Fake-IP 劫持。
-  * 输出 10 项环境一致性对比看板（`完全一致 (MATCH)` / `不一致 (DIFF)`）。
+先按场景一或二下载 `update_clash.py`，再执行相应命令：
+
+| 用途 | Windows PowerShell | Mac / Linux |
+|---|---|---|
+| 普通配置检查 | `python "$env:TEMP\update_clash.py" --check` | `python3 /tmp/update_clash.py --check` |
+| 工作配置检查 | `python "$env:TEMP\update_clash.py" --work --check` | `python3 /tmp/update_clash.py --work --check` |
+| 仅验证线上发布 | `python "$env:TEMP\update_clash.py" --download-only` | `python3 /tmp/update_clash.py --download-only` |
+| 指定普通配置目录并更新 | `python "$env:TEMP\update_clash.py" --dir "C:\实际数据目录"` | `python3 /tmp/update_clash.py --dir "/实际数据目录"` |
+| 指定工作配置目录并更新 | `python "$env:TEMP\update_clash.py" --work --dir "C:\实际数据目录"` | `python3 /tmp/update_clash.py --work --dir "/实际数据目录"` |
+
+`--check` 构造并校验对应模式的候选，检查规则源、当前代理访问和 DNS 状态。它不会写入配置，也不证明运行中的配置已经与候选一致。入口会下载临时文件，结束后清理。
 
 ---
 
@@ -139,7 +170,7 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
    小红书、抖音、快手、微博、B站、支付宝等国内主流服务自动直连，不耗费代理流量，速度拉满。
 4. **海外 AI 工具智能保护**：
    Claude (Anthropic)、OpenAI (ChatGPT) 敏感流量强制指定走高质量代理出口。
-5. **24 小时静默静默同步**：
+5. **同版本整套更新**：
    Clash 端挂载固定提交的 Classical Rule-Provider；新版本通过更新入口整套切换，避免脚本与规则混用。
 
 ---
@@ -154,12 +185,9 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 - **原因**：此前运行过 Shadowrocket 或其他代理软件，退出后残留了旧系统代理端口（如 1082）。
 - **解决**：打开 Clash Verge Rev，拨动一次 **【系统代理 (System Proxy)】** 开关（关一次再开），即可自动将系统代理修正覆盖为 7897 端口。
 
-### Q3: 为什么微信在开启 TUN 模式下发送图片/视频提示红色感叹号？
-- **原因**：
-  1. **IPv6 假死黑洞**：Clash Verge 默认开启 IPv6，TUN 虚拟网卡接管了全局 IPv6 路由，但用户物理 Wi-Fi 没有公网 IPv6，微信优先发起的 IPv6 握手死锁超时。
-  2. **用户态协议栈缓冲瓶颈**：TUN 默认使用的 `gvisor` 用户态栈在处理连续大文件上传（如数兆的高清图/视频）时，存在 TCP Window Scaling 缺陷导致缓冲区溢出丢包，腾讯 CDN 服务器超时断开。
-  3. **虚拟网卡 MTU 错配**：macOS 虚拟网卡默认 MTU 9000 发生以太网（MTU 1500）巨帧分片丢弃。
-- **解决**：最新一键脚本已强制关闭 IPv6（与 Shadowrocket 对齐）、将 TUN 协议栈深度优化为 `stack: mixed`（TCP 走系统内核原生高性能网络栈）并对齐 MTU 1500，同时注入微信全系进程直连与 Real-IP 过滤。客户直接执行场景一的一键命令即可彻底根治，TUN 模式下秒发大图与高清视频。
+### Q3: 微信发图或视频仍失败怎么办？
+- 部署成功不能保证所有应用网络都可用。分别检查当前规则命中、系统 DNS 返回、代理/TUN 接管和目标站点响应。
+- 当前安装器写入持久扩展，不会强制改写运行态 TUN 协议栈、MTU 或系统代理开关。排查后再做有证据的最小修改。
 
 ### Q4: 能否同时开启 Clash Verge Rev 和 Shadowrocket？
 - **原因**：两者都会接管系统网络代理与虚拟 TUN 网卡（如 7897 vs 1082），同时开启会导致流量冲突、端口竞争或连接中断 (EOF)。
@@ -173,12 +201,12 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 ### Q6: Windows 执行提示 `Proxy CONNECT aborted` 或 `未找到数据目录`？
 - **`curl: (56) Proxy CONNECT aborted` 解决**：
   * 说明 Windows 系统代理中残留了已失效的旧端口设置。
-  * **解决**：改用 PowerShell 原生推荐命令 `irm ... -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py`，或在 Windows **设置 -> 网络和 Internet -> 代理** 中关闭手动代理开关。
+  * **解决**：先确认系统代理指向实际运行的 Clash 端口；旧代理失效时在 Windows 网络设置中修正，然后重试场景一的新入口。
 - **`未找到 Clash Verge Rev 数据目录` 或 `未找到 profiles.yaml` 解决**：
   * **原因 1（初次安装未运行）**：刚安装好客户端，但从未双击打开过（Clash Verge Rev 只有在初次启动时才会自动生成 AppData 基础目录）。
   * **原因 2（未导入节点订阅）**：打开了客户端，但在【配置 (Profiles)】中尚未添加任何机场订阅。
   * **解决**：先双击打开一次 Clash Verge Rev，在【配置 (Profiles)】中导入您的订阅链接并点击选中激活，然后重新运行本脚本即可！
-  * **便携绿色版用户**：若使用的是解压版且安装在自定义路径，可直接指定 `--dir` 参数运行（如 `python setup_clash.py --dir "C:\你的路径\config"`）。
+  * **便携绿色版用户**：若使用的是解压版且安装在自定义路径，可直接指定 `--dir` 参数运行（如 `python "$env:TEMP\update_clash.py" --dir "C:\你的路径\config"`）。
 
 ---
 
@@ -194,7 +222,8 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 │   ├── client_merge_template.yaml      # 客户纯净版 Merge 扩展手工模板
 │   └── work_merge_template.yaml        # 个人工作版 Merge 扩展手工模板
 └── scripts/
-    ├── setup_clash_verge.py            # 全自动化一键对齐与环境核验工具（全平台通用）
+    ├── update_clash.py                 # 统一更新入口，验证提交与文件哈希
+    ├── setup_clash_verge.py            # 由更新入口调用的配置安装器
     └── sync_clash.py                   # 双端规则自动转换生成脚本
 ```
 
