@@ -32,7 +32,7 @@ class ProfileSyncTests(unittest.TestCase):
         path.write_text(json.dumps(data))
 
     def plan(self, work=False):
-        with patch.object(setup.subprocess, 'run') as run:
+        with patch.dict(setup.os.environ, {'CLASH_MIHOMO_BIN': '/test/core'}), patch.object(setup.subprocess, 'run') as run:
             run.return_value.returncode = 0
             return setup.prepare_deployment(self.root, work)
 

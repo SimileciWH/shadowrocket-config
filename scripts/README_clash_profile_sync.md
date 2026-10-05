@@ -3,8 +3,8 @@
 `setup_clash_verge.py` 默认同步客户版；只有显式 `--work` / `--company` 才添加公司规则和本机 1088 SOCKS 节点。
 
 ```bash
-python3 scripts/setup_clash_verge.py --dir "/path/to/clash-verge-data"
-python3 scripts/setup_clash_verge.py --check --dir "/path/to/clash-verge-data"
+python3 scripts/update_clash.py --dir "/path/to/clash-verge-data"
+python3 scripts/update_clash.py --check --dir "/path/to/clash-verge-data"
 ```
 
 脚本通过 `profiles.yaml.current` 定位当前订阅，通过每个条目的 `file` 定位订阅和扩展。它不会按显示名称匹配，不扫描最新 YAML 兜底，也不会自动切换到第一份订阅。缺少 Merge / Rules 扩展时创建独立扩展并登记元数据；已有引用失效或扩展被其他订阅共享时停止，避免误改其他订阅。
@@ -43,3 +43,15 @@ $env:CLASH_MIHOMO_BIN = 'C:\path\to\verge-mihomo.exe'
 脚本网络探测只代表探测时正在运行的配置，不能证明刚写入的新扩展已加载。收到 HTTP 403 等响应也不会标为 HTTP 200 成功。
 
 本次修复没有修改 Shadowrocket 分流源或生成的 clash 规则库，因此不需要重新生成或归档分流规则。发布前须单独授权 commit / push；本地脚本修改不会自动更新 CDN。
+
+## 一致版本发布
+
+推送 main 后，GitHub Actions `verify-release.yml` 运行生成器并检查生成结果与已提交的 clash 文件一致，再运行相关测试。生成结果有差异时发布校验失败；应本地运行 `python3 scripts/sync_clash.py` 并一起提交，不能只提交源配置。
+
+`update_clash.py` 查询 main 的完整 SHA，要求该提交最新的 push 校验成功；不会在失败或等待时自动退回旧发布。下载同 SHA 的脚本和三份规则，对照 GitHub tree 中的 blob 哈希校验；下载过程中 main 改变则停止，要求重试。
+
+安装器把规则 URL 固定到同一 SHA，并将已校验规则保存到带 SHA 的独立缓存路径。候选内核使用临时副本校验，正式写入纳入备份和回滚。镜像即使缓存异常也不能绕过下载哈希校验。系统时钟、GitHub 可用性和匿名 API 额度会影响更新，失败时原配置保留。
+
+`python3 scripts/update_clash.py --download-only` 只验证线上快照，不修改或启动 Clash。`--check` 仍只检查候选和运行状态。直接运行 setup 安装写入会被拒绝，防止与未确认版本的规则混搭。
+
+更新入口保证一次更新使用同一版本，不是后台远程推送服务：已安装设备需要再次执行入口并在 Clash 中重新选择订阅。固定版本的 provider 定时刷新不会迁移到下一个版本。旧 Fastly @main 安装命令应停用。

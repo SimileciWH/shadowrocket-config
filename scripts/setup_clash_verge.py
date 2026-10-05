@@ -1,41 +1,16 @@
 #!/usr/bin/env python3
-"""
-Clash Verge Rev 一键配置与环境一致性核验工具 (Shadowrocket 环境对齐专用)
+"""Install current-profile extensions from a verified release snapshot.
 
-目标：
-  为当前订阅生成 Shadowrocket 规则源扩展，校验后备份写入。
-  文件更新、内核候选校验、应用最终加载与网络可用性分别报告。
-
-功能：
-  1. 自动定位本机 Clash Verge Rev 数据目录与激活 Profile。
-  2. 一键注入与 Shadowrocket 完全一致的云端规则集（小红书、抖音、快手、Claude、公司网络等）。
-  3. 探测云端规则集可用性与规则条数。
-  4. 运行态安全检查：核验是否为规则模式（非全局）、TUN 兼容性。
-  5. 实时链路拨测：测试 Clash 端口对小红书、抖音、快手及 Claude 的实际分流响应。
-  6. 输出与 Shadowrocket 基准环境的一致性对比报告。
-
-使用方式：
-  python3 scripts/setup_clash_verge.py          # 一键配置并验证
-  python3 scripts/setup_clash_verge.py --check  # 仅核验当前状态，不修改任何文件
-
-任意 Mac / Linux 终端单行执行（免梯子直连、全自动化）：
-  curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
-
-Windows PowerShell 终端单行执行（任选其一，推荐方式 1 或方式 2）：
-  # 方式 1（PowerShell 推荐，原生写入临时文件执行，完美避免管道与编码问题）：
-  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py
-
-  # 方式 2（跨平台纯 Python 单行指令，全系统通用）：
-  python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
-
-  # 方式 3（使用 curl.exe，添加 --noproxy "*" 防止受系统无效代理残留影响）：
-  curl.exe --noproxy "*" -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
+Use scripts/update_clash.py for installation and upgrades. The updater verifies
+one Git commit for this script and all providers before invoking this file.
+Direct --check remains read-only; standalone installation is rejected.
 """
 
 from __future__ import annotations
 
 import os
 import json
+import hashlib
 import copy
 import tempfile
 import uuid
@@ -1008,6 +983,28 @@ def parse_simple_yaml_map(filepath):
                 result[k.strip()] = v.strip().strip("'\"")
     return result
 
+def release_snapshot():
+    """Require a complete, verified snapshot when a release context is supplied."""
+    sha = os.environ.get("SR_RELEASE_SHA")
+    root = os.environ.get("SR_RELEASE_DIR")
+    if not sha and not root:
+        return None
+    if not sha or not root or not re.fullmatch(r"[0-9a-f]{40}", sha):
+        raise ValueError("发布版本上下文不完整，请使用 update_clash.py")
+    directory = Path(root)
+    manifest = json.loads((directory / "release.json").read_text(encoding="utf-8"))
+    if manifest.get("sha") != sha:
+        raise ValueError("发布清单版本不一致")
+    files = {}
+    for name in ("scripts/setup_clash_verge.py", "clash/rules_direct.yaml", "clash/rules_proxy.yaml", "clash/rules_company.yaml"):
+        data = (directory / name).read_bytes()
+        digest = hashlib.sha1(b"blob " + str(len(data)).encode("ascii") + b"\0" + data).hexdigest()
+        if manifest.get("files", {}).get(name) != digest:
+            raise ValueError("发布文件校验失败：" + name)
+        files[name] = data.decode("utf-8")
+    return sha, files
+
+
 def prepare_deployment(verge_dir, work=False):
     """Prepare current-profile extensions without mutating live configuration."""
     index_path = verge_dir / "profiles.yaml"
@@ -1031,6 +1028,16 @@ def prepare_deployment(verge_dir, work=False):
                                   for rule in generated["prepend-rules"]]
     options = profile.setdefault("option", {})
     updates = {}
+    snapshot = release_snapshot()
+    if snapshot:
+        sha, files = snapshot
+        for name, provider in generated["rule-providers"].items():
+            filename = "rules_" + name[3:] + ".yaml"
+            cache = (verge_dir / "ruleset" / (name + "-" + sha + ".yaml")).resolve()
+            provider["url"] = "https://cdn.jsdelivr.net/gh/SimileciWH/shadowrocket-config@" + sha + "/clash/" + filename
+            provider["path"] = str(cache.resolve())
+            updates[cache] = files["clash/" + filename]
+            expected[cache] = cache.read_bytes() if cache.exists() else None
 
     def extension(kind):
         uid = options.get(kind)
@@ -1140,6 +1147,13 @@ def prepare_deployment(verge_dir, work=False):
     validation = "候选引用检查通过"
     if core:
         with tempfile.TemporaryDirectory(prefix="sr-check-") as temp:
+            if snapshot:
+                for name, provider in candidate.get("rule-providers", {}).items():
+                    if name in generated["rule-providers"]:
+                        cache = Path(provider["path"])
+                        staged = Path(temp) / cache.name
+                        staged.write_text(updates[cache], encoding="utf-8")
+                        provider["path"] = str(staged)
             path = Path(temp) / "candidate.yaml"
             path.write_text(yaml_text(candidate), encoding="utf-8")
             path.chmod(0o600)
@@ -1166,6 +1180,7 @@ def apply_deployment(plan):
     written = []
     try:
         for path, text in plan["updates"].items():
+            path.parent.mkdir(parents=True, exist_ok=True)
             with tempfile.NamedTemporaryFile(dir=path.parent, delete=False) as handle:
                 temp = Path(handle.name)
                 handle.write(text.encode("utf-8"))
@@ -1238,6 +1253,8 @@ def main():
         sys.exit(1)
 
     try:
+        if not check_only and release_snapshot() is None:
+            raise ValueError("请通过 scripts/update_clash.py 更新，以保证脚本和规则版本一致")
         deployment = prepare_deployment(verge_dir, is_work_mode)
         if not check_only:
             apply_deployment(deployment)
@@ -1249,6 +1266,14 @@ def main():
         return 1
     profiles_dir = verge_dir / "profiles"
     cur_profile = deployment["profile"]
+
+    if os.environ.get("SR_RELEASE_SHA"):
+        global DIRECT_URL, PROXY_URL, COMPANY_URL, FALLBACK_BASES
+        revision = os.environ["SR_RELEASE_SHA"]
+        base = "https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/" + revision + "/clash"
+        DIRECT_URL, PROXY_URL, COMPANY_URL = [base + "/rules_" + kind + ".yaml" for kind in ("direct", "proxy", "company")]
+        FALLBACK_BASES = ["https://cdn.jsdelivr.net/gh/SimileciWH/shadowrocket-config@" + revision + "/clash"]
+        print("扩展与规则固定版本：" + revision)
 
     # 5. 校验远程 GitHub 规则源（支持国内 CDN / 镜像自动回退）
     print(f"\n{BOLD}正在检测云端规则源可用性...{RESET}")

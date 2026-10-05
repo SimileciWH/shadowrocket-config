@@ -28,29 +28,26 @@
 * **安全承诺**：
   * **0 隐私风险**：**默认彻底剥离任何公司内网信息**（不含 realtek/realsil/rtkbf 规则及公司隧道节点），绝对不泄漏公司私密。
   * **微信全流程直连**：彻底解决 TUN 模式下微信发文字、发图片、大文件上传被卡住的问题。
-  * **无损增量合并**：修改前自动创建 `.bak` 备份，**严格保留**客户原有的机场订阅和代理节点。
-  * **国内高速直连**：脚本与规则集托管于 jsDelivr CDN，免翻墙即可秒级拉取。
+  * **无损增量合并**：修改前创建独立的 `sr-backup-*` 备份目录，**严格保留**客户原有的机场订阅和代理节点。
+  * **国内高速直连**：通过 GitHub 确认版本，通过 CDN 或 GitHub 下载同版本文件；可用性取决于当地网络。
 
-#### 1. Mac 用户（终端 Terminal 执行单行命令）
+#### 1. Mac / Linux 用户
+
 ```bash
-curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3
+curl -fSL --max-time 60 https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/update_clash.py -o /tmp/update_clash.py && python3 /tmp/update_clash.py
 ```
 
-#### 2. Windows 用户（PowerShell 执行单行命令，任选其一）
-按快捷键 `Win + X` 打开 **Windows PowerShell**，粘贴并回车：
+#### 2. Windows 用户（PowerShell）
 
-* **方式 1（推荐，写入临时文件执行，彻底避免管道编码乱码）：**
-  ```powershell
-  irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py
-  ```
-* **方式 2（跨平台纯 Python 指令，全系统通用）：**
-  ```powershell
-  python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
-  ```
-* **方式 3（单行管道执行，需前置声明 UTF-8 输出编码）：**
-  ```powershell
-  $OutputEncoding = [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python -
-  ```
+```powershell
+$ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/update_clash.py -OutFile "$env:TEMP\update_clash.py"; python "$env:TEMP\update_clash.py"
+```
+
+入口先查询 GitHub 当前提交及发布校验状态，再下载同一提交的安装脚本和三份规则，逐文件校验 Git blob 哈希。镜像只允许回退到同一提交，禁止回退旧版本。GitHub 不可达、限流、校验未完成或下载不完整时停止，不改本机配置。
+
+**整套更新**：以后更新请重新执行上述入口。规则 URL 和本地缓存都绑定同一提交；24 小时 provider 刷新只检查该版本，不会自行混入下一版本。旧安装需执行一次新入口迁移。打开 Clash 重新选择订阅后，再验收实际加载和网络访问。
+
+发布规范及环境依赖见 [同步与验收说明](scripts/README_clash_profile_sync.md)。
 
 #### 3. 客户生效确认（仅需 2 步）：
 1. 打开 Clash Verge Rev，激活当前配置：
@@ -67,22 +64,18 @@ curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/sc
   * 自动挂载 `127.0.0.1:1088` SSH 隧道节点，将 `realtek.com`、`realsil.com.cn`、`rtkbf.com` 及内网 IP 自动分流到 `CORP-WINDOWS` 出口。
   * TUN 虚拟网卡自动排除 Tailscale（`100.64.0.0/10`）与局域网网段，防止劫持公司跳板机隧道。
 
-#### 1. Mac / Linux 终端：
-```bash
-# 云端拉取执行：
-curl -fsSL https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py | python3 - --work
+#### 1. Mac / Linux 终端
 
-# 或本地仓库直接执行：
-python3 scripts/setup_clash_verge.py --work
+```bash
+curl -fSL --max-time 60 https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/update_clash.py -o /tmp/update_clash.py && python3 /tmp/update_clash.py --work
 ```
 
-#### 2. Windows PowerShell：
-```powershell
-# 推荐执行：
-irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py -OutFile $env:TEMP\setup_clash.py; python $env:TEMP\setup_clash.py --work
+本地仓库使用 `python3 scripts/update_clash.py --work`；该入口更新到 GitHub 已验证的最新版本，不安装未发布的本地改动。
 
-# 或纯 Python 通用执行：
-python -c "import sys, urllib.request; sys.argv.append('--work'); exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"
+#### 2. Windows PowerShell
+
+```powershell
+$ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/scripts/update_clash.py -OutFile "$env:TEMP\update_clash.py"; python "$env:TEMP\update_clash.py" --work
 ```
 
 ---
@@ -139,7 +132,7 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 ## 核心保障与双端一致性特性
 
 1. **出站策略组自适应识别**：
-   自动识别用户当前配置中主代理组命名（无论是 `PROXY`、`Proxy` 还是 `节点选择`），自适应绑定规则并注入别名映射，**开启 TUN 网卡接管模式绝不报错阻断**（彻底解决 `proxy [节点选择] not found` 异常）。
+   根据当前订阅的真实代理组绑定规则，写入 Rules 扩展并进行内核候选校验；无法确定目标时停止，不回退到 DIRECT。
 2. **微信/QQ 全媒体极速直连**：
    采用“进程级直连 + 关键词直连 + 腾讯全系 Real-IP”三重保障，彻底杜绝微信发高清图片、语音通话转圈与超时问题。
 3. **国内大厂 100% 直连**：
@@ -147,7 +140,7 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 4. **海外 AI 工具智能保护**：
    Claude (Anthropic)、OpenAI (ChatGPT) 敏感流量强制指定走高质量代理出口。
 5. **24 小时静默静默同步**：
-   Clash 端挂载 Classical Rule-Provider，每 24 小时静默从 CDN 自动更新规则集，双端长期保持最新。
+   Clash 端挂载固定提交的 Classical Rule-Provider；新版本通过更新入口整套切换，避免脚本与规则混用。
 
 ---
 
@@ -155,7 +148,7 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 
 ### Q1: 在 Clash Verge Rev 开启 TUN 模式时弹红框报错？
 - **原因**：部分配置中主代理组叫 `PROXY`，而旧规则硬编码了 `节点选择`。
-- **解决**：直接重新执行场景一的单行命令，脚本会自动探测当前配置的主组名并建立映射，执行后右键刷新配置即可正常开启 TUN。
+- **解决**：直接重新执行场景一的单行命令，脚本会检查当前订阅的真实代理组并修正规则引用；重新选择配置后，还需确认内核和网络正常。
 
 ### Q2: 为什么终端 curl 报 `Failed to connect after 2 ms`？
 - **原因**：此前运行过 Shadowrocket 或其他代理软件，退出后残留了旧系统代理端口（如 1082）。

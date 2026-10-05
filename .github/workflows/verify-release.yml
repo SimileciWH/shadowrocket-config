@@ -1,0 +1,29 @@
+name: Verify release snapshot
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+      - run: python -m pip install PyYAML==6.0.3
+      - name: Generate and verify committed rules
+        run: |
+          python scripts/sync_clash.py
+          git diff --exit-code -- clash/
+      - name: Test release and profile synchronization
+        run: |
+          python -m unittest discover -s tests -p 'test_release_sync.py' -v
+          python -m unittest discover -s tests -p 'test_clash_profile_sync.py' -v
+          python -m unittest discover -s tests -p 'test_douyin_real_ip.py' -v
+      - name: Check Python syntax and whitespace
+        run: |
+          python -m py_compile scripts/update_clash.py scripts/setup_clash_verge.py
+          git diff --check
