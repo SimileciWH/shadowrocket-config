@@ -1,31 +1,6 @@
 # Clash Verge Rev Merge 模版 (个人工作定制版)
 # 适用于个人办公电脑，包含公司内网 SSH 隧道 (127.0.0.1:1088) 与公司服务分流
 
-# 全局关闭 IPv6（与 Shadowrocket 对齐，防止 TUN 模式下因公网缺少 IPv6 导致微信发图/大文件上传超时）
-ipv6: false
-
-# TUN 虚拟网卡深度优化（TCP 使用系统内核协议栈，彻底解决 userspace gVisor 缓冲区溢出与丢包）
-# 严格对齐 Shadowrocket bypass-tun，排除 Tailscale (100.64.0.0/10) 与局域网网段，防止劫持公司跳板机隧道
-tun:
-  enable: true
-  stack: mixed
-  auto-route: true
-  auto-detect-interface: true
-  dns-hijack:
-    - any:53
-    - tcp://any:53
-  strict-route: false
-  mtu: 1500
-  endpoint-independent-nat: true
-  route-exclude-address:
-    - 100.64.0.0/10
-    - 111.231.15.226/32
-    - 127.0.0.0/8
-    - 10.0.0.0/8
-    - 172.16.0.0/12
-    - 192.168.0.0/16
-    - 169.254.0.0/16
-
 rule-providers:
   sr-direct:
     type: http

@@ -181,6 +181,16 @@ rules:
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn,DIRECT
   - DOMAIN-SUFFIX,dscache.tencent-cloud.cn,DIRECT
   - DOMAIN-SUFFIX,cdn-go.cn,DIRECT
+  # Microsoft Windows Update / Delivery Optimization / NCSI (微软系统更新、交付优化与联网探测直连)
+  # 彻底杜绝 Windows 11/10 后台交付优化 (do.dsp.mp.microsoft.com) 走海外代理被拒绝 (EOF) 与死循环报错，节省海量代理流量
+  - DOMAIN-SUFFIX,mp.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,update.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
+  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
+  - DOMAIN-SUFFIX,windows.com,DIRECT
+  - DOMAIN-SUFFIX,s-microsoft.com,DIRECT
   # Russian-hosted IP fallback, after explicit domain policies.
   - GEOIP,RU,justg-vps-RU-direct
   # Default

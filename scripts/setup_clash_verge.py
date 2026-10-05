@@ -134,8 +134,19 @@ WECHAT_REAL_IP_DOMAINS = [
     "+.dscache.tencent-cloud.cn",
 ]
 
+# 微软 Windows 系统更新、交付优化 (Delivery Optimization) 与网络探测直连域名
+MICROSOFT_REAL_IP_DOMAINS = [
+    "+.mp.microsoft.com",
+    "+.windowsupdate.com",
+    "+.update.microsoft.com",
+    "+.msftconnecttest.com",
+    "+.msftncsi.com",
+    "+.windows.com",
+    "+.s-microsoft.com",
+]
+
 # 所有需要确保返回真实公网 IP 的目标域名集
-ALL_REAL_IP_DOMAINS = WECHAT_REAL_IP_DOMAINS + DOUYIN_REAL_IP_DOMAINS
+ALL_REAL_IP_DOMAINS = WECHAT_REAL_IP_DOMAINS + DOUYIN_REAL_IP_DOMAINS + MICROSOFT_REAL_IP_DOMAINS
 
 # 系统代理 Bypass 核心直连后缀
 BYPASS_LIST_ITEMS = [
@@ -146,7 +157,9 @@ BYPASS_LIST_ITEMS = [
     "*.tencent.com", "*.cdn-go.cn", "*.tencentcs.cn", "*.tencent-cloud.com", "*.tencent-cloud.cn",
     "*.douyin.com", "*.iesdouyin.com", "*.douyincdn.com", "*.douyinpic.com",
     "*.douyinstatic.com", "*.douyinvod.com", "*.zjcdn.com", "*.ydycdn.com",
-    "*.bytednsdoc.com", "*.byteimg.com", "*.ibytedtos.com"
+    "*.bytednsdoc.com", "*.byteimg.com", "*.ibytedtos.com",
+    "*.mp.microsoft.com", "*.windowsupdate.com", "*.update.microsoft.com",
+    "*.msftconnecttest.com", "*.msftncsi.com", "*.windows.com", "*.s-microsoft.com"
 ]
 
 def backup_file(file_path: Path) -> Path:
@@ -427,6 +440,15 @@ prepend-rules:
   - DOMAIN-SUFFIX,myqcloud.com,DIRECT
   - DOMAIN-SUFFIX,qcloud.com,DIRECT
   - DOMAIN-SUFFIX,jsdelivr.net,DIRECT
+  # 微软 Windows 系统更新与交付优化直连（彻底杜绝 Windows Update / Delivery Optimization 走代理导致 EOF 报错及消耗大量流量）
+  - DOMAIN-SUFFIX,mp.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,update.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
+  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
+  - DOMAIN-SUFFIX,windows.com,DIRECT
+  - DOMAIN-SUFFIX,s-microsoft.com,DIRECT
   - RULE-SET,sr-proxy,{main_group}
   - RULE-SET,sr-direct,DIRECT
   - GEOIP,LAN,DIRECT,no-resolve
@@ -492,6 +514,11 @@ dns:
     - "+.dscache.tencent-cloud.cn"
     - "+.msftncsi.com"
     - "+.msftconnecttest.com"
+    - "+.mp.microsoft.com"
+    - "+.windowsupdate.com"
+    - "+.update.microsoft.com"
+    - "+.windows.com"
+    - "+.s-microsoft.com"
     # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
     - "v.douyin.com"
     - "www.iesdouyin.com"
@@ -605,6 +632,15 @@ prepend-rules:
   - DOMAIN-SUFFIX,myqcloud.com,DIRECT
   - DOMAIN-SUFFIX,qcloud.com,DIRECT
   - DOMAIN-SUFFIX,jsdelivr.net,DIRECT
+  # 微软 Windows 系统更新与交付优化直连（彻底杜绝 Windows Update / Delivery Optimization 走代理导致 EOF 报错及消耗大量流量）
+  - DOMAIN-SUFFIX,mp.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,update.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
+  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
+  - DOMAIN-SUFFIX,windows.com,DIRECT
+  - DOMAIN-SUFFIX,s-microsoft.com,DIRECT
   - RULE-SET,sr-company,CORP-WINDOWS
   - RULE-SET,sr-proxy,{main_group}
   - RULE-SET,sr-direct,DIRECT
@@ -671,6 +707,11 @@ dns:
     - "+.dscache.tencent-cloud.cn"
     - "+.msftncsi.com"
     - "+.msftconnecttest.com"
+    - "+.mp.microsoft.com"
+    - "+.windowsupdate.com"
+    - "+.update.microsoft.com"
+    - "+.windows.com"
+    - "+.s-microsoft.com"
     # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
     - "v.douyin.com"
     - "www.iesdouyin.com"
@@ -1078,7 +1119,7 @@ def main():
                         need_full_write = True
                     if not is_work_mode and ("CORP-WINDOWS" in cur_merge or "sr-company" in cur_merge):
                         need_full_write = True
-                    if "WeChatAppEx Helper" not in cur_merge or "nameserver-policy" not in cur_merge or "stack: mixed" not in cur_merge or "ipv6: false" not in cur_merge or "route-exclude-address" not in cur_merge:
+                    if "WeChatAppEx Helper" not in cur_merge or "nameserver-policy" not in cur_merge or "stack: mixed" not in cur_merge or "ipv6: false" not in cur_merge or "route-exclude-address" not in cur_merge or "mp.microsoft.com" not in cur_merge:
                         need_full_write = True
 
             if need_full_write:
@@ -1130,6 +1171,15 @@ prepend:
   - DOMAIN-SUFFIX,myqcloud.com,DIRECT
   - DOMAIN-SUFFIX,qcloud.com,DIRECT
   - DOMAIN-SUFFIX,jsdelivr.net,DIRECT
+  # 微软 Windows 系统更新与交付优化直连（彻底杜绝 Windows Update / Delivery Optimization 走代理导致 EOF 报错及消耗大量流量）
+  - DOMAIN-SUFFIX,mp.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.com,DIRECT
+  - DOMAIN-SUFFIX,windowsupdate.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,update.microsoft.com,DIRECT
+  - DOMAIN-SUFFIX,msftconnecttest.com,DIRECT
+  - DOMAIN-SUFFIX,msftncsi.com,DIRECT
+  - DOMAIN-SUFFIX,windows.com,DIRECT
+  - DOMAIN-SUFFIX,s-microsoft.com,DIRECT
 {company_line}  - RULE-SET,sr-proxy,{main_group}
   - RULE-SET,sr-direct,DIRECT
 

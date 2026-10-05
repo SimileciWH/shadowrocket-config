@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
 # Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-1)
 # Change: fully align WeChat image, voice, video, media direct rules, real-ip and proxy bypass
-# Total entries: 89
+# Total entries: 97
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -85,10 +85,6 @@ payload:
   - DOMAIN-SUFFIX,qlogo.cn
   - DOMAIN-SUFFIX,tencent.com
   - DOMAIN-SUFFIX,myqcloud.com
-  - DOMAIN-SUFFIX,qcloud.com
-  - DOMAIN-SUFFIX,tencent-cloud.net
-  - DOMAIN-SUFFIX,tencent-cloud.cn
-  - DOMAIN-SUFFIX,tencentcs.cn
   - DOMAIN,dns.weixin.qq.com.cn
   - DOMAIN-SUFFIX,cloud.tencent.com
   - DOMAIN-SUFFIX,qcloudimg.tencent-cloud.cn
@@ -96,3 +92,11 @@ payload:
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn
   - DOMAIN-SUFFIX,dscache.tencent-cloud.cn
   - DOMAIN-SUFFIX,cdn-go.cn
+  - DOMAIN-SUFFIX,mp.microsoft.com
+  - DOMAIN-SUFFIX,windowsupdate.com
+  - DOMAIN-SUFFIX,windowsupdate.microsoft.com
+  - DOMAIN-SUFFIX,update.microsoft.com
+  - DOMAIN-SUFFIX,msftconnecttest.com
+  - DOMAIN-SUFFIX,msftncsi.com
+  - DOMAIN-SUFFIX,windows.com
+  - DOMAIN-SUFFIX,s-microsoft.com
