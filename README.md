@@ -43,8 +43,10 @@ irm https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/s
 *(如遇脚本受限，也可使用全平台通用指令：`python -c "import urllib.request; exec(urllib.request.urlopen('https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/scripts/setup_clash_verge.py').read().decode('utf-8'))"`)*
 
 #### 3. 客户生效确认（仅需 2 步）：
-1. 打开 Clash Verge Rev，在配置列表右键点击当前打勾的配置 -> 选择 **“刷新 (Refresh)”**。
-2. 确保代理模式为 **`规则 (Rule)`** 并开启 **`系统代理 (System Proxy)`**。
+1. 打开 Clash Verge Rev，激活当前配置：
+   * 若配置为 **远程订阅链接导入**：右键点击该配置 -> 选择 **“刷新 (Refresh)”**。
+   * 若配置为 **本地文件导入 (Local)**：直接点击该配置卡片切换一下（或右键选择 **“Select”**）。
+2. 确保代理模式为 **`规则 (Rule)`**（禁止使用 Global 全局），开启 **`TUN 模式`** 或 **`系统代理 (System Proxy)`** 均可，此时微信发图/大文件、视频剪辑、海外 AI 均已全线打通！
 
 ---
 
@@ -139,9 +141,12 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 - **原因**：此前运行过 Shadowrocket 或其他代理软件，退出后残留了旧系统代理端口（如 1082）。
 - **解决**：打开 Clash Verge Rev，拨动一次 **【系统代理 (System Proxy)】** 开关（关一次再开），即可自动将系统代理修正覆盖为 7897 端口。
 
-### Q3: 为什么微信发送大图、视频或文件时提示红色感叹号失败？
-- **原因**：微信在上传大图和文件时会调用专属辅助进程（如 macOS 上的 `WeChatAppEx Helper`、`XPlayer` 或 Windows 上的 `WeChatAppEx.exe`），若 DNS 解析被 Fake-IP 劫持或被误代理，腾讯云服务器会主动重置连接。
-- **解决**：最新配置已注入微信全系进程直连、腾讯云存储 Real-IP 过滤及国内直连 DNS 解析策略。重新运行一键配置脚本并右键刷新配置即可正常秒发。
+### Q3: 为什么微信在开启 TUN 模式下发送图片/视频提示红色感叹号？
+- **原因**：
+  1. **IPv6 假死黑洞**：Clash Verge 默认开启 IPv6，TUN 虚拟网卡接管了全局 IPv6 路由，但用户物理 Wi-Fi 没有公网 IPv6，微信优先发起的 IPv6 握手死锁超时。
+  2. **用户态协议栈缓冲瓶颈**：TUN 默认使用的 `gvisor` 用户态栈在处理连续大文件上传（如数兆的高清图/视频）时，存在 TCP Window Scaling 缺陷导致缓冲区溢出丢包，腾讯 CDN 服务器超时断开。
+  3. **虚拟网卡 MTU 错配**：macOS 虚拟网卡默认 MTU 9000 发生以太网（MTU 1500）巨帧分片丢弃。
+- **解决**：最新一键脚本已强制关闭 IPv6（与 Shadowrocket 对齐）、将 TUN 协议栈深度优化为 `stack: mixed`（TCP 走系统内核原生高性能网络栈）并对齐 MTU 1500，同时注入微信全系进程直连与 Real-IP 过滤。客户直接执行场景一的一键命令即可彻底根治，TUN 模式下秒发大图与高清视频。
 
 ### Q4: 能否同时开启 Clash Verge Rev 和 Shadowrocket？
 - **原因**：两者都会接管系统网络代理与虚拟 TUN 网卡（如 7897 vs 1082），同时开启会导致流量冲突、端口竞争或连接中断 (EOF)。
