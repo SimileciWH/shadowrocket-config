@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-1)
-# Change: fully align WeChat image, voice, video, media direct rules, real-ip and proxy bypass
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-2)
+# Change: preserve real IP for observed Douyin CNAME targets; verify the application resolver path
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.

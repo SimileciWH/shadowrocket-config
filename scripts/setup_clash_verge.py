@@ -38,6 +38,7 @@ import os
 import sys
 import re
 import socket
+import ipaddress
 import time
 import shutil
 import subprocess
@@ -89,7 +90,22 @@ FALLBACK_BASES = [
 ]
 
 # 抖音全系核心直连与 Real-IP 域名（彻底防止 fake-IP 导致爬虫/ClipVault 报 UNSAFE_URL / 非公网地址拦截）
+# Exact CNAME targets observed in the macOS resolver path; avoid broad CDN suffixes.
+DOUYIN_CNAME_HOSTS = [
+    "www.iesdouyin.com.bytedns1.com",
+    "www.iesdouyin.com.w.kunluncan.com",
+    "www.iesdouyin.com.queniuum.com",
+    "v.douyin.com.bytedns1.com",
+    "v.douyin.com.w.cdngslb.com",
+    "v.douyin.com.queniuiq.com",
+    "www.douyin.com.bytedns1.com",
+    "www.douyin.com-1.download.ks-cdn.com",
+    "q2.gslb.ksyuncdn.com",
+    "q2-fclouddns.gslb.new.fclouddns.net",
+]
+
 DOUYIN_REAL_IP_DOMAINS = [
+    *DOUYIN_CNAME_HOSTS,
     "v.douyin.com",
     "www.iesdouyin.com",
     "www.douyin.com",
@@ -187,6 +203,21 @@ def is_fake_ip(ip_str: str) -> bool:
         except ValueError:
             pass
     return False
+
+def system_dns_status(host: str) -> tuple[list[str], bool]:
+    """Check the application's resolver path, including every returned address."""
+    try:
+        addresses = sorted({record[4][0] for record in socket.getaddrinfo(
+            host, 443, type=socket.SOCK_STREAM)})
+        parsed = [ipaddress.ip_address(address) for address in addresses]
+        public = bool(parsed) and all(
+            ip.is_global and not (ip.is_multicast or ip.is_reserved or ip.is_unspecified)
+            for ip in parsed
+        )
+        return addresses, public
+    except (OSError, ValueError):
+        return [], False
+
 
 def merge_fake_ip_filter_content(content: str, domains_to_real_ip: list[str]) -> tuple[str, bool, str]:
     """
@@ -451,6 +482,7 @@ def detect_main_proxy_group(profile_path: Path) -> tuple[str, list[str]]:
 
 def build_client_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建客户通用纯净版 Merge 扩展内容（根据实际代理组自适应绑定与注入兼容别名）。"""
+    cname_filter = "\n".join(f'    - "{host}"' for host in DOUYIN_CNAME_HOSTS)
     if existing_groups is None:
         existing_groups = []
 
@@ -591,6 +623,7 @@ dns:
     - "+.windows.com"
     - "+.s-microsoft.com"
     # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
+{cname_filter}
     - "v.douyin.com"
     - "www.iesdouyin.com"
     - "www.douyin.com"
@@ -609,6 +642,7 @@ dns:
 
 def build_work_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建个人工作定制版 Merge 扩展内容（包含公司 1088 SSH 隧道与自适应代理组）。"""
+    cname_filter = "\n".join(f'    - "{host}"' for host in DOUYIN_CNAME_HOSTS)
     if existing_groups is None:
         existing_groups = []
 
@@ -766,6 +800,7 @@ dns:
     - "+.windows.com"
     - "+.s-microsoft.com"
     # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
+{cname_filter}
     - "v.douyin.com"
     - "www.iesdouyin.com"
     - "www.douyin.com"
@@ -1454,37 +1489,15 @@ delete: []
     test_dns_domains = ["v.douyin.com", "www.iesdouyin.com", "www.douyin.com"]
     print(f"\n{BOLD}正在检测核心域名 Real-IP 解析状态 (保障非 198.18.x.x Fake-IP)...{RESET}")
     for d in test_dns_domains:
-        resolved_ip = None
-        # 1. 优先通过本地 Clash DNS 端口 (1053 或 53)
-        for dns_port in [1053, 53]:
-            try:
-                cmd = ["dig", "@127.0.0.1", "-p", str(dns_port), d, "+short", "+time=2"]
-                dig_res = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
-                if dig_res.returncode == 0 and dig_res.stdout.strip():
-                    for line in dig_res.stdout.strip().splitlines():
-                        line = line.strip()
-                        if re.match(r"^\d+\.\d+\.\d+\.\d+$", line):
-                            resolved_ip = line
-                            break
-                if resolved_ip:
-                    break
-            except Exception:
-                pass
-        # 2. 兜底通过系统原生 DNS 解析器
-        if not resolved_ip:
-            try:
-                resolved_ip = socket.gethostbyname(d)
-            except Exception:
-                pass
-
-        is_fake = is_fake_ip(resolved_ip) if resolved_ip else False
-        is_real = bool(resolved_ip and not is_fake)
+        # Direct DNS queries can pass while getaddrinfo follows a fake-IP CNAME.
+        addresses, is_real = system_dns_status(d)
+        resolved_ip = ", ".join(addresses) if addresses else None
         douyin_dns_status[d] = (resolved_ip, is_real)
         
         if is_real:
             print(f"  - {d:<22}: {GREEN}真实公网 IP ({resolved_ip}){RESET}")
-        elif resolved_ip and is_fake:
-            print(f"  - {d:<22}: {RED}Fake-IP 拦截 ({resolved_ip}){RESET} -> 请刷新配置")
+        elif resolved_ip:
+            print(f"  - {d:<22}: {RED}非公网/Fake-IP 拦截 ({resolved_ip}){RESET} -> 请刷新配置")
         else:
             print(f"  - {d:<22}: {YELLOW}解析等待中{RESET}")
 

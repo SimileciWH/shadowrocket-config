@@ -92,14 +92,18 @@ python -c "import sys, urllib.request; sys.argv.append('--work'); exec(urllib.re
 * **痛点根治**：
   许多视频解析工具（如 ClipVault、自研爬虫等）内置严格的 SSRF 安全防御机制。如果 Clash 的 Fake-IP 分配了 `198.18.x.x`（Benchmark 测速保留网段），爬虫会判定为非公网地址并直接阻断（报错 `UNSAFE_URL` / `DNS 返回非公网地址`）。
 * **解决机制**：
-  脚本已对 `v.douyin.com`、`www.iesdouyin.com`、`www.douyin.com` 及全系抖音 CDN 域名（`zjcdn.com`、`ydycdn.com` 等）配置智能 Real-IP 增量合并：
+  脚本对 `v.douyin.com`、`www.iesdouyin.com`、`www.douyin.com`、已有抖音 CDN 域名，以及本轮实际观察到的 10 个 CNAME 别名配置 Real-IP 增量合并。仅排除主域名不够：macOS 可能继续解析 `www.iesdouyin.com.bytedns1.com` 等别名并收到假 IP。别名使用精确主机名，不扩大到整个 CDN 厂商后缀：
   * 若当前为 `blacklist` 黑名单模式：自动将域名加入 `fake-ip-filter`，确保**直接返回真实公网 IP**。
   * 若当前为 `whitelist` 白名单模式：自动将域名从过滤列表中剔除，确保**返回真实公网 IP**。
 * **验证真实 IP 命令**：
   ```bash
-  python3 -c "import socket; print('v.douyin.com:', socket.gethostbyname('v.douyin.com')); print('www.douyin.com:', socket.gethostbyname('www.douyin.com'))"
+  python3 -c "import socket; [print(h, sorted({r[4][0] for r in socket.getaddrinfo(h, 443, type=socket.SOCK_STREAM)})) for h in ['v.douyin.com', 'www.iesdouyin.com', 'www.douyin.com']]"
   ```
-  预期结果：输出均为真实电信/联通/CDN 公网 IP，**绝无 `198.18.x.x`**。
+  预期结果：所有返回地址均为公网 IP，不能混入 `198.18.0.0/15`、回环或其他非公网地址。`--check` 使用同一路径，不再用 `dig` 的成功结果代替应用解析结果。
+
+* **生效与验收**：更新脚本后重新执行并激活配置。Rule-Provider 的定时更新只更新路由规则，不会自动补充本机 DNS 过滤列表；Shadowrocket 则更新配置中的 `always-real-ip`。配置生效后先验证上述系统解析，再重试失败素材并核验文件。短暂 DoH 超时与假 IP 是两类问题，不要关闭应用安全校验。
+* 本轮案例及验证边界见 [抖音 CNAME 假 IP 修复记录](versions/20261005-douyin-cname-validation.md)。
+* **重启恢复**：DNS 规则必须保存到当前配置的持久 Merge 扩展，并验证重新激活后仍生效。需要登录后自动恢复代理时，启用 Clash 自动启动或已验证的用户登录启动任务；本一键脚本不会自动更改登录项。
 
 ---
 
@@ -168,12 +172,10 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 - **原因**：两者都会接管系统网络代理与虚拟 TUN 网卡（如 7897 vs 1082），同时开启会导致流量冲突、端口竞争或连接中断 (EOF)。
 - **解决**：在验证或使用 Clash Verge Rev 时，请先将 Shadowrocket 断开连接；同样使用 Shadowrocket 时关闭 Clash 即可。
 
-### Q5: 如何确认抖音等短视频已正常获得真实 IP？
-- 在终端运行：
-  ```bash
-  dig @127.0.0.1 -p 1053 v.douyin.com +short
-  ```
-  若返回形如 `117.68.x.x` 或 `155.102.x.x` 的公网地址（而非 `198.18.x.x`），即表示 Real-IP 已成功生效。
+### Q5: 为什么 `dig` 返回公网 IP，应用仍报 `UNSAFE_URL`？
+- `dig` 直接查询 DNS 服务，与 macOS 应用的系统解析路径不完全相同。系统可能继续查询 CNAME 别名，而别名仍被分配假 IP。
+- 使用场景三的 `socket.getaddrinfo` 命令核实全部地址；若不一致，可用 `dns-sd -G v4 www.iesdouyin.com` 查看 macOS 实际返回的别名及地址（完成后按 Ctrl+C 停止）。
+- 将实际观察到的别名加入 Real-IP 规则后重新激活配置；单纯清缓存不一定解决。不要把主域名的 `dig` 成功当作下载通过。
 
 ### Q6: Windows 执行提示 `Proxy CONNECT aborted` 或 `未找到数据目录`？
 - **`curl: (56) Proxy CONNECT aborted` 解决**：

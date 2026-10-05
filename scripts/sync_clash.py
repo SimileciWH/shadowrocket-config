@@ -14,6 +14,7 @@ import os
 import re
 import sys
 from pathlib import Path
+from setup_clash_verge import DOUYIN_REAL_IP_DOMAINS
 
 def main():
     repo_root = Path(__file__).resolve().parent.parent
@@ -240,6 +241,8 @@ def main():
         f.write('    - "+.myqcloud.com"\n')
         f.write('    - "+.msftncsi.com"\n')
         f.write('    - "+.msftconnecttest.com"\n')
+        for domain in DOUYIN_REAL_IP_DOMAINS:
+            f.write(f'    - "{domain}"\n')
 
     # 6. Write clash/work_merge_template.yaml (个人工作版：包含公司 1088 SSH 隧道)
     work_merge_file = clash_dir / "work_merge_template.yaml"
@@ -342,6 +345,8 @@ def main():
             f.write('    - "+.myqcloud.com"\n')
             f.write('    - "+.msftncsi.com"\n')
             f.write('    - "+.msftconnecttest.com"\n')
+            for domain in DOUYIN_REAL_IP_DOMAINS:
+                f.write(f'    - "{domain}"\n')
 
     print(f"Successfully synced Clash rules from {sr_conf_path.name} (v{version}):")
     print(f"  - DIRECT rules: {len(direct_payload)} -> {direct_file.name}")
