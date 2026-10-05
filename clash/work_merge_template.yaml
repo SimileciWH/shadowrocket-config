@@ -49,16 +49,30 @@ prepend-proxy-groups:
 
 # 优先匹配规则列表
 prepend-rules:
-  # 微信核心客户端进程直连（彻底保障 Mac & Windows 发文字、发图片、语音通话 100% 走本地直连）
+  # 微信全系客户端进程与多媒体直连（彻底保障 Mac & Windows 发文字、发图片、大文件上传、音视频通话 100% 走本地直连）
   - PROCESS-NAME,WeChat,DIRECT
   - PROCESS-NAME,WeChat.exe,DIRECT
   - PROCESS-NAME,WeChatAppEx,DIRECT
   - PROCESS-NAME,WeChatAppEx.exe,DIRECT
+  - PROCESS-NAME,WeChatAppEx Helper,DIRECT
+  - PROCESS-NAME,WeChatAppEx Helper (Renderer),DIRECT
+  - PROCESS-NAME,WeChatHelper,DIRECT
+  - PROCESS-NAME,WeChatHelper.exe,DIRECT
+  - PROCESS-NAME,XPlayer,DIRECT
+  - PROCESS-NAME,WeChatPlayer.exe,DIRECT
   - PROCESS-NAME,Weixin,DIRECT
   - PROCESS-NAME,Weixin.exe,DIRECT
   - DOMAIN-KEYWORD,weixin,DIRECT
   - DOMAIN-KEYWORD,wechat,DIRECT
   - DOMAIN-KEYWORD,qpic,DIRECT
+  - DOMAIN-SUFFIX,weixin.qq.com,DIRECT
+  - DOMAIN-SUFFIX,wechat.com,DIRECT
+  - DOMAIN-SUFFIX,qpic.cn,DIRECT
+  - DOMAIN-SUFFIX,qpic.com,DIRECT
+  - DOMAIN-SUFFIX,qq.com,DIRECT
+  - DOMAIN-SUFFIX,myqcloud.com,DIRECT
+  - DOMAIN-SUFFIX,qcloud.com,DIRECT
+  - DOMAIN-SUFFIX,jsdelivr.net,DIRECT
   - RULE-SET,sr-company,CORP-WINDOWS
   - RULE-SET,sr-proxy,节点选择
   - RULE-SET,sr-direct,DIRECT
@@ -72,6 +86,24 @@ dns:
   enhanced-mode: fake-ip
   fake-ip-range: 198.18.0.1/16
   fake-ip-filter-mode: blacklist
+  default-nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+  nameserver:
+    - 223.5.5.5
+    - 119.29.29.29
+    - https://doh.pub/dns-query
+    - https://dns.alidns.com/dns-query
+  nameserver-policy:
+    "geosite:cn,private":
+      - 223.5.5.5
+      - 119.29.29.29
+    "+.qq.com,+.weixin.qq.com,+.wechat.com,+.weixin.com,+.qpic.cn,+.qpic.com,+.tencent.com,+.myqcloud.com,+.qcloud.com":
+      - 119.29.29.29
+      - 223.5.5.5
+    "+.jsdelivr.net":
+      - 223.5.5.5
+      - 119.29.29.29
   fake-ip-filter:
     - "*.lan"
     - "*.local"
@@ -98,6 +130,12 @@ dns:
     - "+.tencent-cloud.net"
     - "+.tencent-cloud.cn"
     - "+.myqcloud.com"
+    - "+.qcloud.com"
+    - "+.cdn-go.cn"
+    - "+.tencentcs.cn"
+    - "+.cloudcache.tencent-cloud.com"
+    - "+.cloudcache.tencentcs.cn"
+    - "+.dscache.tencent-cloud.cn"
     - "+.msftncsi.com"
     - "+.msftconnecttest.com"
     # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）

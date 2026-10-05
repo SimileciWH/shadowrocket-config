@@ -139,7 +139,15 @@ https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/sr_ai_secu
 - **原因**：此前运行过 Shadowrocket 或其他代理软件，退出后残留了旧系统代理端口（如 1082）。
 - **解决**：打开 Clash Verge Rev，拨动一次 **【系统代理 (System Proxy)】** 开关（关一次再开），即可自动将系统代理修正覆盖为 7897 端口。
 
-### Q3: 如何确认抖音等短视频已正常获得真实 IP？
+### Q3: 为什么微信发送大图、视频或文件时提示红色感叹号失败？
+- **原因**：微信在上传大图和文件时会调用专属辅助进程（如 macOS 上的 `WeChatAppEx Helper`、`XPlayer` 或 Windows 上的 `WeChatAppEx.exe`），若 DNS 解析被 Fake-IP 劫持或被误代理，腾讯云服务器会主动重置连接。
+- **解决**：最新配置已注入微信全系进程直连、腾讯云存储 Real-IP 过滤及国内直连 DNS 解析策略。重新运行一键配置脚本并右键刷新配置即可正常秒发。
+
+### Q4: 能否同时开启 Clash Verge Rev 和 Shadowrocket？
+- **原因**：两者都会接管系统网络代理与虚拟 TUN 网卡（如 7897 vs 1082），同时开启会导致流量冲突、端口竞争或连接中断 (EOF)。
+- **解决**：在验证或使用 Clash Verge Rev 时，请先将 Shadowrocket 断开连接；同样使用 Shadowrocket 时关闭 Clash 即可。
+
+### Q5: 如何确认抖音等短视频已正常获得真实 IP？
 - 在终端运行：
   ```bash
   dig @127.0.0.1 -p 1053 v.douyin.com +short
