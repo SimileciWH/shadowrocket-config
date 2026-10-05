@@ -37,6 +37,7 @@ import sys
 import re
 import socket
 import time
+import shutil
 import subprocess
 import urllib.request
 import urllib.error
@@ -61,6 +62,236 @@ FALLBACK_BASES = [
     "https://fastly.jsdelivr.net/gh/SimileciWH/shadowrocket-config@main/clash",
     "https://ghproxy.net/https://raw.githubusercontent.com/SimileciWH/shadowrocket-config/main/clash",
 ]
+
+# 抖音全系核心直连与 Real-IP 域名（彻底防止 fake-IP 导致爬虫/ClipVault 报 UNSAFE_URL / 非公网地址拦截）
+DOUYIN_REAL_IP_DOMAINS = [
+    "v.douyin.com",
+    "www.iesdouyin.com",
+    "www.douyin.com",
+    "+.douyin.com",
+    "+.iesdouyin.com",
+    "+.douyincdn.com",
+    "+.douyinpic.com",
+    "+.douyinstatic.com",
+    "+.douyinvod.com",
+    "+.zjcdn.com",
+    "+.ydycdn.com",
+    "+.bytednsdoc.com",
+    "+.byteimg.com",
+    "+.ibytedtos.com",
+]
+
+# 微信核心直连与 Real-IP 域名（防止图片上传、语音通话被 fake-IP 拦截）
+WECHAT_REAL_IP_DOMAINS = [
+    "localhost.ptlogin2.qq.com",
+    "localhost.work.weixin.qq.com",
+    "+.weixin.qq.com",
+    "+.wechat.com",
+    "+.weixin.com",
+    "+.qpic.cn",
+    "+.qpic.com",
+    "+.qq.com",
+    "+.tencent.com",
+    "+.gtimg.com",
+    "+.gtimg.cn",
+    "+.qlogo.cn",
+    "+.weixinbridge.com",
+    "+.servicewechat.com",
+    "+.wechatpay.cn",
+    "+.tenpay.com",
+    "+.wechatos.net",
+    "+.tencent-cloud.net",
+    "+.tencent-cloud.cn",
+    "+.myqcloud.com",
+]
+
+# 所有需要确保返回真实公网 IP 的目标域名集
+ALL_REAL_IP_DOMAINS = WECHAT_REAL_IP_DOMAINS + DOUYIN_REAL_IP_DOMAINS
+
+# 系统代理 Bypass 核心直连后缀
+BYPASS_LIST_ITEMS = [
+    "*.qq.com", "*.wechat.com", "*.weixin.qq.com", "*.weixin.com",
+    "*.qpic.cn", "*.qpic.com", "*.gtimg.cn", "*.gtimg.com", "*.qlogo.cn",
+    "*.wechatos.net", "*.servicewechat.com", "*.weixinbridge.com",
+    "*.wechatpay.cn", "*.tenpay.com", "*.myqcloud.com", "*.tencent.com",
+    "*.douyin.com", "*.iesdouyin.com", "*.douyincdn.com", "*.douyinpic.com",
+    "*.douyinstatic.com", "*.douyinvod.com", "*.zjcdn.com", "*.ydycdn.com",
+    "*.bytednsdoc.com", "*.byteimg.com", "*.ibytedtos.com"
+]
+
+def backup_file(file_path: Path) -> Path:
+    """在修改前创建 .bak 副本，妥善备份客户原有配置。"""
+    bak_path = file_path.with_name(f"{file_path.name}.bak")
+    if not bak_path.exists() and file_path.exists():
+        shutil.copy2(file_path, bak_path)
+    return bak_path
+
+def normalize_domain(d: str) -> str:
+    """标准化域名表示，去除首尾单双引号与空白。"""
+    return d.strip().strip("'\"").strip().lower()
+
+def is_fake_ip(ip_str: str) -> bool:
+    """判断 IPv4 地址是否属于 Clash fake-ip 地址池 (198.18.0.0/15)。"""
+    if not ip_str:
+        return False
+    parts = ip_str.strip().split(".")
+    if len(parts) == 4 and parts[0] == "198":
+        try:
+            second = int(parts[1])
+            return 18 <= second <= 19
+        except ValueError:
+            pass
+    return False
+
+def merge_fake_ip_filter_content(content: str, domains_to_real_ip: list[str]) -> tuple[str, bool, str]:
+    """
+    根据现有 fake-ip-filter-mode 智能增量合并 fake-ip-filter 规则，严格幂等且不破坏其他配置。
+    
+    1. 若 fake-ip-filter-mode 为 blacklist (默认黑名单模式)：
+       所有在 fake-ip-filter 里的域名返回 REAL IP。因此目标域名必须【加入】到 fake-ip-filter 中。
+    2. 若 fake-ip-filter-mode 为 whitelist (白名单模式)：
+       只有在 fake-ip-filter 里的域名才返回 fake-IP。因此目标域名必须【从 fake-ip-filter 中剔除】以返回 REAL IP。
+    
+    返回: (新文本内容, 是否有变动, 生效模式)
+    """
+    mode_match = re.search(r"^\s*fake-ip-filter-mode:\s*([a-zA-Z0-9_-]+)", content, re.MULTILINE)
+    mode = mode_match.group(1).lower().strip() if mode_match else "blacklist"
+    
+    lines = content.splitlines(keepends=True)
+    target_norm_set = {normalize_domain(d) for d in domains_to_real_ip}
+    
+    filter_start_idx = None
+    base_indent = "  "
+    filter_item_indices = []
+    is_inline_empty_list = False
+    
+    for idx, line in enumerate(lines):
+        m = re.match(r"^(\s*)fake-ip-filter:\s*(\[\])?\s*(#.*)?$", line)
+        if m:
+            filter_start_idx = idx
+            base_indent = m.group(1)
+            if m.group(2) == "[]":
+                is_inline_empty_list = True
+            
+            curr_idx = idx + 1
+            while curr_idx < len(lines):
+                sub_line = lines[curr_idx]
+                if not sub_line.strip() or sub_line.strip().startswith("#"):
+                    curr_idx += 1
+                    continue
+                sub_indent_m = re.match(r"^(\s+)", sub_line)
+                if not sub_indent_m or len(sub_indent_m.group(1)) <= len(base_indent):
+                    break
+                item_m = re.match(r"^(\s*-\s*)(.*)", sub_line)
+                if item_m:
+                    filter_item_indices.append(curr_idx)
+                curr_idx += 1
+            break
+            
+    if mode == "whitelist":
+        # 白名单模式：在 filter 中的才会变成 fake-IP，要返回真实 IP 则必须从中移除
+        if filter_start_idx is None or not filter_item_indices:
+            return content, False, mode
+        
+        lines_to_remove = set()
+        for i in filter_item_indices:
+            item_val = lines[i].split("-", 1)[1].split("#")[0].strip()
+            if normalize_domain(item_val) in target_norm_set:
+                lines_to_remove.add(i)
+                
+        if not lines_to_remove:
+            return content, False, mode
+            
+        new_lines = [line for idx, line in enumerate(lines) if idx not in lines_to_remove]
+        return "".join(new_lines), True, mode
+
+    else:
+        # 黑名单模式 (默认)：在 filter 中的会跳过 fake-IP 返回 REAL IP
+        existing_domains = set()
+        indent_str = base_indent + "  - "
+        
+        if filter_item_indices:
+            last_item_idx = filter_item_indices[-1]
+            for i in filter_item_indices:
+                item_val = lines[i].split("-", 1)[1].split("#")[0].strip()
+                existing_domains.add(normalize_domain(item_val))
+            first_item_line = lines[filter_item_indices[0]]
+            dash_m = re.match(r"^(\s*-\s*)", first_item_line)
+            if dash_m:
+                indent_str = dash_m.group(1)
+        else:
+            last_item_idx = filter_start_idx
+            
+        domains_to_add = [d for d in domains_to_real_ip if normalize_domain(d) not in existing_domains]
+        if not domains_to_add:
+            return content, False, mode
+            
+        if filter_start_idx is None:
+            dns_idx = None
+            dns_indent = ""
+            for idx, line in enumerate(lines):
+                dns_m = re.match(r"^(\s*)dns:\s*$", line)
+                if dns_m:
+                    dns_idx = idx
+                    dns_indent = dns_m.group(1)
+                    break
+            
+            sub_indent = dns_indent + "  "
+            item_indent = dns_indent + "    - "
+            new_block = [
+                f"{sub_indent}fake-ip-filter-mode: blacklist\n",
+                f"{sub_indent}fake-ip-filter:\n"
+            ]
+            for d in domains_to_add:
+                new_block.append(f"{item_indent}'{d}'\n")
+                
+            if dns_idx is not None:
+                lines[dns_idx+1:dns_idx+1] = new_block
+            else:
+                lines.append("\ndns:\n  enable: true\n  enhanced-mode: fake-ip\n  fake-ip-filter-mode: blacklist\n  fake-ip-filter:\n")
+                for d in domains_to_add:
+                    lines.append(f"    - '{d}'\n")
+            return "".join(lines), True, mode
+            
+        if is_inline_empty_list:
+            lines[filter_start_idx] = f"{base_indent}fake-ip-filter:\n"
+            indent_str = base_indent + "  - "
+            last_item_idx = filter_start_idx
+            
+        new_items = [f"{indent_str}'{d}'\n" for d in domains_to_add]
+        lines[last_item_idx+1:last_item_idx+1] = new_items
+        return "".join(lines), True, mode
+
+def merge_system_proxy_bypass_content(content: str, bypass_items: list[str]) -> tuple[str, bool]:
+    """增量合并系统代理 bypass 白名单，保留客户原有项，幂等去重。"""
+    m = re.search(r"^\s*system_proxy_bypass:\s*(.*)", content, re.MULTILINE)
+    default_base = ["localhost", "127.*", "10.*", "192.168.*", "172.16.*", "<local>"]
+    all_targets = []
+    for item in default_base + bypass_items:
+        if item not in all_targets:
+            all_targets.append(item)
+            
+    if m:
+        raw_val = m.group(1).strip().strip("'\"")
+        if raw_val in ("null", "~", "", "None"):
+            final_list = all_targets
+        else:
+            existing = [x.strip() for x in raw_val.split(";") if x.strip()]
+            final_list = list(existing)
+            for item in all_targets:
+                if item not in final_list:
+                    final_list.append(item)
+        new_val_str = ";".join(final_list)
+        if raw_val == new_val_str:
+            return content, False
+        new_line = f'system_proxy_bypass: "{new_val_str}"'
+        new_content = re.sub(r"^\s*system_proxy_bypass:.*", new_line, content, flags=re.MULTILINE)
+        return new_content, True
+    else:
+        new_val_str = ";".join(all_targets)
+        new_content = content + f'\nsystem_proxy_bypass: "{new_val_str}"\n'
+        return new_content, True
+
 
 # 客户通用纯净版 Merge 扩展模板（彻底剥离公司信息与私有节点，0 隐私风险，适合发给客户）
 CLIENT_MERGE_CONTENT = """# Profile Enhancement Merge for Clash Verge Rev (Client Public Edition)
@@ -132,6 +363,21 @@ dns:
     - "+.myqcloud.com"
     - "+.msftncsi.com"
     - "+.msftconnecttest.com"
+    # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
+    - "v.douyin.com"
+    - "www.iesdouyin.com"
+    - "www.douyin.com"
+    - "+.douyin.com"
+    - "+.iesdouyin.com"
+    - "+.douyincdn.com"
+    - "+.douyinpic.com"
+    - "+.douyinstatic.com"
+    - "+.douyinvod.com"
+    - "+.zjcdn.com"
+    - "+.ydycdn.com"
+    - "+.bytednsdoc.com"
+    - "+.byteimg.com"
+    - "+.ibytedtos.com"
 """
 
 # 个人工作定制版 Merge 扩展模板（包含公司 1088 SSH 隧道与内部服务分流）
@@ -233,6 +479,21 @@ dns:
     - "+.myqcloud.com"
     - "+.msftncsi.com"
     - "+.msftconnecttest.com"
+    # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
+    - "v.douyin.com"
+    - "www.iesdouyin.com"
+    - "www.douyin.com"
+    - "+.douyin.com"
+    - "+.iesdouyin.com"
+    - "+.douyincdn.com"
+    - "+.douyinpic.com"
+    - "+.douyinstatic.com"
+    - "+.douyinvod.com"
+    - "+.zjcdn.com"
+    - "+.ydycdn.com"
+    - "+.bytednsdoc.com"
+    - "+.byteimg.com"
+    - "+.ibytedtos.com"
 """
 
 def find_verge_dir():
@@ -430,13 +691,36 @@ def main():
 
     # 4. 执行写入（非只读模式）
     if not check_only:
-        with open(merge_file, "w", encoding="utf-8") as f:
-            f.write(chosen_merge_content)
-        print(f"[{GREEN}OK{RESET}] 已写入 {edition_name} 规则到 Merge 扩展文件 ({merge_file.name})")
+        # 4.1 写入 / 增量合并 Merge 扩展文件
+        need_full_write = True
+        cur_merge = ""
+        if merge_file.exists():
+            with open(merge_file, "r", encoding="utf-8") as f:
+                cur_merge = f.read()
+            if "sr-direct" in cur_merge:
+                need_full_write = False
+
+        if need_full_write:
+            if merge_file.exists():
+                backup_file(merge_file)
+            with open(merge_file, "w", encoding="utf-8") as f:
+                f.write(chosen_merge_content)
+            print(f"[{GREEN}OK{RESET}] 已写入 {edition_name} 完整规则到 Merge 扩展文件 ({merge_file.name})")
+        else:
+            backup_file(merge_file)
+            new_merge, merge_changed, merge_mode = merge_fake_ip_filter_content(cur_merge, ALL_REAL_IP_DOMAINS)
+            if merge_changed:
+                with open(merge_file, "w", encoding="utf-8") as f:
+                    f.write(new_merge)
+                print(f"[{GREEN}OK{RESET}] 已向 Merge 扩展文件 ({merge_file.name}) 增量合并 Real-IP DNS 过滤规则 [{merge_mode}模式]")
+            else:
+                print(f"[{GREEN}OK{RESET}] Merge 扩展文件 ({merge_file.name}) 已包含最新 Real-IP 规则 (幂等保留)")
 
         # 同步写入 Rules 扩展以保障置顶优先级
         if rules_uid and rules_uid != "null":
             rules_file = profiles_dir / f"{rules_uid}.yaml"
+            if rules_file.exists():
+                backup_file(rules_file)
             company_line = "  - RULE-SET,sr-company,CORP-WINDOWS\n" if is_work_mode else ""
             rules_ext_content = f"""# Profile Enhancement Rules Template for Clash Verge
 
@@ -462,82 +746,86 @@ delete: []
                 f.write(rules_ext_content)
             print(f"[{GREEN}OK{RESET}] 已一键注入置顶规则到 Rules 扩展文件 ({rules_file.name})")
 
-        # 4.2 注入全局系统代理白名单与 DNS fake-ip-filter (彻底保障微信发图片、音视频 100% 直连无阻)
-        wechat_fake_ip_list = [
-            "localhost.ptlogin2.qq.com",
-            "localhost.work.weixin.qq.com",
-            "+.weixin.qq.com",
-            "+.wechat.com",
-            "+.weixin.com",
-            "+.qpic.cn",
-            "+.qpic.com",
-            "+.qq.com",
-            "+.tencent.com",
-            "+.gtimg.com",
-            "+.gtimg.cn",
-            "+.qlogo.cn",
-            "+.weixinbridge.com",
-            "+.servicewechat.com",
-            "+.wechatpay.cn",
-            "+.tenpay.com",
-            "+.wechatos.net",
-            "+.tencent-cloud.net",
-            "+.tencent-cloud.cn",
-            "+.myqcloud.com",
-        ]
-        wechat_bypass_list = "localhost;127.*;10.*;192.168.*;172.16.*;<local>;*.qq.com;*.wechat.com;*.weixin.qq.com;*.weixin.com;*.qpic.cn;*.qpic.com;*.gtimg.cn;*.gtimg.com;*.qlogo.cn;*.wechatos.net;*.servicewechat.com;*.weixinbridge.com;*.wechatpay.cn;*.tenpay.com;*.myqcloud.com;*.tencent.com"
-
+        # 4.2 增量合并系统代理白名单与 DNS fake-ip-filter (微信发图 + 抖音视频 Real-IP 100% 直连无阻)
         # A. 更新 verge.yaml 的系统代理 bypass 列表
         verge_yaml_path = verge_dir / "verge.yaml"
         if verge_yaml_path.exists():
             try:
+                backup_file(verge_yaml_path)
                 with open(verge_yaml_path, "r", encoding="utf-8") as f:
                     vy = f.read()
-                if "system_proxy_bypass:" in vy:
-                    vy = re.sub(r'system_proxy_bypass:\s*.*', f'system_proxy_bypass: "{wechat_bypass_list}"', vy)
-                else:
-                    vy += f'\nsystem_proxy_bypass: "{wechat_bypass_list}"\n'
-                with open(verge_yaml_path, "w", encoding="utf-8") as f:
-                    f.write(vy)
-                print(f"[{GREEN}OK{RESET}] 已向 verge.yaml 注入系统代理微信/直连白名单 (system_proxy_bypass)")
-            except Exception:
-                pass
+                new_vy, vy_changed = merge_system_proxy_bypass_content(vy, BYPASS_LIST_ITEMS)
+                if vy_changed:
+                    with open(verge_yaml_path, "w", encoding="utf-8") as f:
+                        f.write(new_vy)
+                    print(f"[{GREEN}OK{RESET}] 已向 verge.yaml 增量注入系统代理直连白名单 (system_proxy_bypass)")
+            except Exception as e:
+                print(f"[{YELLOW}WARN{RESET}] 更新 verge.yaml 遇到提示: {e}")
 
         # B. 更新 dns_config.yaml 中的 fake-ip-filter
         dns_config_path = verge_dir / "dns_config.yaml"
         if dns_config_path.exists():
             try:
+                backup_file(dns_config_path)
                 with open(dns_config_path, "r", encoding="utf-8") as f:
                     dy = f.read()
-                if "fake-ip-filter:" in dy and "+.weixin.qq.com" not in dy:
-                    filter_lines = "\n".join([f"  - '{d}'" for d in wechat_fake_ip_list])
-                    dy = re.sub(r"(fake-ip-filter:\s*\n)", rf"\1{filter_lines}\n", dy, count=1)
+                new_dy, dy_changed, dy_mode = merge_fake_ip_filter_content(dy, ALL_REAL_IP_DOMAINS)
+                if dy_changed:
                     with open(dns_config_path, "w", encoding="utf-8") as f:
-                        f.write(dy)
-                    print(f"[{GREEN}OK{RESET}] 已向 dns_config.yaml 注入微信/QQ 全系 fake-ip-filter 白名单")
-            except Exception:
-                pass
+                        f.write(new_dy)
+                    print(f"[{GREEN}OK{RESET}] 已向 dns_config.yaml 增量注入 Real-IP 域名规则 [{dy_mode}模式]")
+            except Exception as e:
+                print(f"[{YELLOW}WARN{RESET}] 更新 dns_config.yaml 遇到提示: {e}")
 
         # C. 确保当前主配置文件中的 fake-ip-filter 生效
         cur_prof_file = profiles_dir / f"{current_uid}.yaml"
         if cur_prof_file.exists():
             try:
+                backup_file(cur_prof_file)
                 with open(cur_prof_file, "r", encoding="utf-8") as f:
                     cp_text = f.read()
-                if "+.weixin.qq.com" not in cp_text:
-                    filter_lines = "\n    - ".join([""] + [f'"{d}"' for d in wechat_fake_ip_list])
-                    if "fake-ip-filter:" in cp_text:
-                        cp_text = re.sub(r"(fake-ip-filter:\s*\n)", rf"\1    - {filter_lines.strip()}\n", cp_text, count=1)
-                    elif "enhanced-mode: fake-ip" in cp_text:
-                        cp_text = re.sub(
-                            r"(enhanced-mode:\s*fake-ip\s*\n)",
-                            rf"\1  fake-ip-filter-mode: blacklist\n  fake-ip-filter:{filter_lines}\n",
-                            cp_text,
-                            count=1
-                        )
+                new_cp, cp_changed, cp_mode = merge_fake_ip_filter_content(cp_text, ALL_REAL_IP_DOMAINS)
+                if cp_changed:
                     with open(cur_prof_file, "w", encoding="utf-8") as f:
-                        f.write(cp_text)
-                    print(f"[{GREEN}OK{RESET}] 已向当前配置 {cur_prof_file.name} 注入微信 fake-ip-filter 白名单")
+                        f.write(new_cp)
+                    print(f"[{GREEN}OK{RESET}] 已向当前配置 {cur_prof_file.name} 增量注入 Real-IP 域名规则 [{cp_mode}模式]")
+            except Exception as e:
+                print(f"[{YELLOW}WARN{RESET}] 更新当前配置遇到提示: {e}")
+
+        # D. 更新 clash-verge.yaml 中的 fake-ip-filter
+        clash_config_path = verge_dir / "clash-verge.yaml"
+        if clash_config_path.exists():
+            try:
+                backup_file(clash_config_path)
+                with open(clash_config_path, "r", encoding="utf-8") as f:
+                    cvy = f.read()
+                new_cvy, cvy_changed, cvy_mode = merge_fake_ip_filter_content(cvy, ALL_REAL_IP_DOMAINS)
+                if cvy_changed:
+                    with open(clash_config_path, "w", encoding="utf-8") as f:
+                        f.write(new_cvy)
+                    print(f"[{GREEN}OK{RESET}] 已向 clash-verge.yaml 增量注入 Real-IP 域名规则 [{cvy_mode}模式]")
+            except Exception as e:
+                print(f"[{YELLOW}WARN{RESET}] 更新 clash-verge.yaml 遇到提示: {e}")
+
+        # 4.3 自动刷新与重载生效 (macOS 下自动无感重载，使全新 DNS 过滤配置立即生效)
+        if sys.platform == "darwin" and (Path("/Applications/Clash Verge.app").exists() or Path.home().joinpath("Applications/Clash Verge.app").exists()):
+            try:
+                ps_res = subprocess.run(["pgrep", "-f", "clash-verge"], capture_output=True, text=True)
+                if ps_res.returncode == 0:
+                    print(f"[{BLUE}RELOAD{RESET}] 正在无感重载 Clash Verge Rev 以使全新 DNS 过滤配置立即生效...")
+                    subprocess.run(["pkill", "-f", "/Applications/Clash Verge.app"], capture_output=True)
+                    time.sleep(1)
+                    subprocess.run(["open", "-a", "Clash Verge"], capture_output=True)
+                    time.sleep(2)
+            except Exception:
+                pass
+
+        # 4.4 刷新 fake-ip 缓存 (通过 unix socket)
+        mihomo_sock = Path("/var/run/clash-verge-service/users/501/verge-mihomo.sock")
+        if mihomo_sock.exists():
+            try:
+                curl_cmd = ["curl", "-s", "-X", "POST", "--unix-socket", str(mihomo_sock), "http://localhost/cache/fakeip/flush"]
+                subprocess.run(curl_cmd, capture_output=True, timeout=3)
             except Exception:
                 pass
     else:
@@ -621,6 +909,47 @@ delete: []
     else:
         print(f"\n[{BLUE}INFO{RESET}] Clash 代理端口 {mixed_port} 当前未在监听（内核未启动），配置已就绪，启动后即可直接生效。")
 
+    # 8.2 核心域名 Real-IP DNS 深度拨测（确保 v.douyin.com / www.iesdouyin.com / www.douyin.com 绝不返回 198.18.x.x）
+    douyin_dns_status = {}
+    test_dns_domains = ["v.douyin.com", "www.iesdouyin.com", "www.douyin.com"]
+    print(f"\n{BOLD}正在检测核心域名 Real-IP 解析状态 (保障非 198.18.x.x Fake-IP)...{RESET}")
+    for d in test_dns_domains:
+        resolved_ip = None
+        # 1. 优先通过本地 Clash DNS 端口 (1053 或 53)
+        for dns_port in [1053, 53]:
+            try:
+                cmd = ["dig", "@127.0.0.1", "-p", str(dns_port), d, "+short", "+time=2"]
+                dig_res = subprocess.run(cmd, capture_output=True, text=True, timeout=3)
+                if dig_res.returncode == 0 and dig_res.stdout.strip():
+                    for line in dig_res.stdout.strip().splitlines():
+                        line = line.strip()
+                        if re.match(r"^\d+\.\d+\.\d+\.\d+$", line):
+                            resolved_ip = line
+                            break
+                if resolved_ip:
+                    break
+            except Exception:
+                pass
+        # 2. 兜底通过系统原生 DNS 解析器
+        if not resolved_ip:
+            try:
+                resolved_ip = socket.gethostbyname(d)
+            except Exception:
+                pass
+
+        is_fake = is_fake_ip(resolved_ip) if resolved_ip else False
+        is_real = bool(resolved_ip and not is_fake)
+        douyin_dns_status[d] = (resolved_ip, is_real)
+        
+        if is_real:
+            print(f"  - {d:<22}: {GREEN}真实公网 IP ({resolved_ip}){RESET}")
+        elif resolved_ip and is_fake:
+            print(f"  - {d:<22}: {RED}Fake-IP 拦截 ({resolved_ip}){RESET} -> 请刷新配置")
+        else:
+            print(f"  - {d:<22}: {YELLOW}解析等待中{RESET}")
+
+    all_douyin_real = all(st[1] for st in douyin_dns_status.values()) if douyin_dns_status else False
+
     # 9. 状态一致性检测报告
     print(f"\n{BOLD}{CYAN}======================== 环境一致性对照报告 ========================{RESET}")
 
@@ -640,6 +969,7 @@ delete: []
     report_row("直连分流规则库", "89 条 (含小红书/抖音/快手)", f"{direct_count} 条", direct_ok and direct_count >= 80)
     report_row("AI 代理规则保护", "12 条 (强制走代理出口)", f"{proxy_count} 条", proxy_ok and proxy_count >= 10)
     report_row("微信发图/音视频", "进程直连 + fake-ip-filter", "已保障", True)
+    report_row("抖音核心 Real-IP", "真实公网 IP (非 Fake-IP)", "已生效 (返回公网 IP)" if all_douyin_real else "未就绪 (Fake-IP)", all_douyin_real)
     if is_work_mode:
         report_row("公司内网隧道分流", "1088 端口 SSH 隧道", "已配置", True)
     report_row("虚拟 TUN 模式", "规则分流 (TUN/系统代理均可)", "已开启 (网卡级接管)" if tun_mode else "未开启 (系统代理)", True)
