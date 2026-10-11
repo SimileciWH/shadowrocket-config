@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-2)
-# Change: preserve real IP for observed Douyin CNAME targets; verify the application resolver path
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.11)
+# Change: route verified company LAN 172.29.216.0/24 through CORP-WINDOWS before private LAN DIRECT
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -11,6 +11,8 @@ rules:
   - DOMAIN-SUFFIX,rtkbf.com,CORP-WINDOWS
   - IP-CIDR,172.26.75.18/32,CORP-WINDOWS,no-resolve
   - IP-CIDR,172.26.75.27/32,CORP-WINDOWS,no-resolve
+  # Verified on both work Windows hosts; do not expand to all RFC1918 ranges.
+  - IP-CIDR,172.29.216.0/24,CORP-WINDOWS,no-resolve
   # Local / LAN / Mac mini / VNC
   - IP-CIDR,127.0.0.0/8,DIRECT,no-resolve
   - IP-CIDR,10.0.0.0/8,DIRECT,no-resolve

@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: PROXY (Claude / Anthropic / AI)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.05-2)
-# Change: preserve real IP for observed Douyin CNAME targets; verify the application resolver path
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.11)
+# Change: route verified company LAN 172.29.216.0/24 through CORP-WINDOWS before private LAN DIRECT
 # Total entries: 12
 payload:
   - DOMAIN-SUFFIX,claude.ai
