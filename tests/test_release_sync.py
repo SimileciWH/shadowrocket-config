@@ -63,10 +63,15 @@ class ReleaseTests(unittest.TestCase):
                 updater.download_snapshot(SHA, Path(temp))
             self.assertFalse((Path(temp) / 'release.json').exists())
 
-    def test_snapshot_binds_urls_and_local_rule_cache(self):
+    def test_snapshot_uses_verified_file_providers_for_service_runtime(self):
         fixture = fixtures.ProfileSyncTests()
         fixture.setUp()
         self.addCleanup(fixture.doCleanups)
+        merge_path = fixture.profiles / 'actual-merge.yaml'
+        old_merge = json.loads(merge_path.read_text())
+        old_merge['rule-providers']['sr-direct'] = {
+            'type': 'http', 'url': 'https://old.example/rules.yaml', 'interval': 86400}
+        fixture.write(merge_path, old_merge)
         with tempfile.TemporaryDirectory() as temp:
             directory = Path(temp)
             self.snapshot(directory)
@@ -75,7 +80,9 @@ class ReleaseTests(unittest.TestCase):
                 merge = json.loads(plan['updates'][fixture.profiles / 'actual-merge.yaml'])
                 for name in ('sr-direct', 'sr-proxy'):
                     provider = merge['rule-providers'][name]
-                    self.assertIn('@' + SHA + '/', provider['url'])
+                    self.assertEqual(provider['type'], 'file')
+                    self.assertNotIn('url', provider)
+                    self.assertNotIn('interval', provider)
                     cache = Path(provider['path'])
                     self.assertIn(SHA, cache.name)
                     self.assertIn(cache, plan['updates'])

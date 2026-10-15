@@ -102,7 +102,14 @@ DOUYIN_REAL_IP_DOMAINS = [
 ]
 
 # Keep Xiaohongshu share pages and media on public DNS answers for ClipVault.
+XIAOHONGSHU_CNAME_HOSTS = [
+    "sns-video-v6.xhscdn.com.volcgslb.com",
+    "sns-video-v6.xhscdn.com.m.v19.volcgtm.com",
+    "sns-video-hs.xhscdn.com.m.v05.volcgtm.com",
+    "hcdnv.ydbdxhsv6.m.v05.volcgtm.com",
+]
 XIAOHONGSHU_REAL_IP_DOMAINS = [
+    *XIAOHONGSHU_CNAME_HOSTS,
     "+.xiaohongshu.com",
     "+.xhscdn.com",
     "+.xhscdn.net",
@@ -1056,7 +1063,11 @@ def prepare_deployment(verge_dir, work=False):
         for name, provider in generated["rule-providers"].items():
             filename = "rules_" + name[3:] + ".yaml"
             cache = (verge_dir / "ruleset" / (name + "-" + sha + ".yaml")).resolve()
-            provider["url"] = "https://cdn.jsdelivr.net/gh/SimileciWH/shadowrocket-config@" + sha + "/clash/" + filename
+            # Service mode copies file assets, but does not seed HTTP caches.
+            # The updater already verified these immutable commit-pinned bytes.
+            provider["type"] = "file"
+            provider.pop("url", None)
+            provider.pop("interval", None)
             provider["path"] = str(cache.resolve())
             updates[cache] = files["clash/" + filename]
             expected[cache] = cache.read_bytes() if cache.exists() else None
@@ -1127,6 +1138,10 @@ def prepare_deployment(verge_dir, work=False):
         if old_nodes == [{"name": "CORP-WINDOWS-NODE", "type": "socks5", "server": "127.0.0.1", "port": 1088}]:
             merge.pop("proxies")
     combine(merge, generated)
+    if snapshot:
+        for name in generated["rule-providers"]:
+            merge["rule-providers"][name].pop("url", None)
+            merge["rule-providers"][name].pop("interval", None)
     if not work:
         merge.get("rule-providers", {}).pop("sr-company", None)
     updates[merge_path] = yaml_text(merge)

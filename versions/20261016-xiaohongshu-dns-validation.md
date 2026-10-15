@@ -42,3 +42,12 @@ python3 -c "import socket; [print(h, sorted({r[4][0] for r in socket.getaddrinfo
 ```
 
 再由客户手动重试原失败素材，核对实际视频文件。若仍有 fake-IP，保留结果继续排查生成配置、当前订阅和真实 CNAME；不放行非公网连接，不直接修改生成配置充当持久修复。重新激活后仍须另行验证重启恢复。
+
+## 正式远程更新复测发现与第二版
+
+用户授权支持人员通过 SSH 运行正式更新入口、加载并验收。确认 ClipVault 最近二十分钟无任务更新，VK 发布调度关闭，未停止 ClipVault；仅重启 Clash 应用。第一版 `ee297cc` 正式入口返回 0，保存备份且候选通过内核校验；但加载后两个边界未通过，不能据退出 0 宣称修复：
+
+1. 视频 CDN 的系统解析继续查询别名，分别返回 fake-IP：`sns-video-v6.xhscdn.com.volcgslb.com`、`sns-video-v6.xhscdn.com.m.v19.volcgtm.com`、`sns-video-hs.xhscdn.com.m.v05.volcgtm.com`、`hcdnv.ydbdxhsv6.m.v05.volcgtm.com`。第二版只增加这四个精确别名，源配置同步 always-real-ip，不扩大厂商后缀。
+2. 运行服务内核 `/providers/rules` 的两份管理规则均 ruleCount=0，应用日志提示缓存未同步。Clash 2.5.8 [运行包实现](https://github.com/clash-verge-rev/clash-verge-rev/blob/v2.5.8/src-tauri/src/core/runtime_bundle.rs)将 HTTP provider 声明为需内核下载的远程缓存，不把应用目录已有快照作为本地资产复制；file provider 则复制本地资产。第二版将正式更新器已经校验的快照用 `type: file` 部署，并清除管理规则源的历史 URL / interval，保留其他自定义规则源。
+
+新增/加强测试先分别复现漏别名和仍部署 HTTP provider 两项失败，修改后 31 项相关回归通过。归档为 `sr_ai_secure_final_20261016_2.conf`，版本 `2026.10.16.2`。第二版客户运行态和实际下载结果须以远程执行回执为准，本节不预先标为通过。

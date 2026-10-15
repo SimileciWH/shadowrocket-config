@@ -12,6 +12,12 @@ spec.loader.exec_module(setup)
 
 HOST = 'www.iesdouyin.com.bytedns1.com'
 XHS_DOMAINS = {'+.xiaohongshu.com', '+.xhscdn.com', '+.xhscdn.net'}
+XHS_CNAME_HOSTS = {
+    'sns-video-v6.xhscdn.com.volcgslb.com',
+    'sns-video-v6.xhscdn.com.m.v19.volcgtm.com',
+    'sns-video-hs.xhscdn.com.m.v05.volcgtm.com',
+    'hcdnv.ydbdxhsv6.m.v05.volcgtm.com',
+}
 
 
 def records(*addresses):
@@ -25,11 +31,14 @@ class DouyinRealIPTests(unittest.TestCase):
         for builder in (setup.build_client_merge_content, setup.build_work_merge_content):
             dns = setup.load_yaml(builder())['dns']
             self.assertEqual(dns['fake-ip-filter-mode'], 'blacklist')
-            self.assertTrue(XHS_DOMAINS.issubset(dns['fake-ip-filter']))
+            self.assertTrue((XHS_DOMAINS | XHS_CNAME_HOSTS).issubset(dns['fake-ip-filter']))
         for name in ('client_merge_template.yaml', 'work_merge_template.yaml', 'clash_merge_template.yaml'):
             dns = setup.load_yaml((ROOT / 'clash' / name).read_text())['dns']
             self.assertEqual(dns['fake-ip-filter-mode'], 'blacklist')
-            self.assertTrue(XHS_DOMAINS.issubset(dns['fake-ip-filter']))
+            self.assertTrue((XHS_DOMAINS | XHS_CNAME_HOSTS).issubset(dns['fake-ip-filter']))
+        real = next(line for line in (ROOT / 'sr_ai_secure_final.conf').read_text().splitlines()
+                    if line.startswith('always-real-ip ='))
+        self.assertTrue(XHS_CNAME_HOSTS.issubset(real.split('=', 1)[1].strip().split(',')))
 
     def test_cname_covered_in_installer_and_both_builders(self):
         self.assertIn(HOST, setup.DOUYIN_REAL_IP_DOMAINS)

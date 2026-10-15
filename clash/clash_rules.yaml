@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16)
-# Change: sync existing Xiaohongshu Real-IP policy into Clash installers and merge templates
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.2)
+# Change: exclude observed Xiaohongshu CNAME fake-IP aliases and deploy verified file providers for service mode
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.

@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16)
-# Change: sync existing Xiaohongshu Real-IP policy into Clash installers and merge templates
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.2)
+# Change: exclude observed Xiaohongshu CNAME fake-IP aliases and deploy verified file providers for service mode
 # Total entries: 97
 payload:
   - DOMAIN,ezgo.realsil.com.cn
