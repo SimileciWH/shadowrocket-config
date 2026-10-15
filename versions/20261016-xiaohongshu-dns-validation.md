@@ -90,4 +90,18 @@ python3 -c "import socket; [print(h, sorted({r[4][0] for r in socket.getaddrinfo
 
 第四版 `2026.10.16.4` 在 Clash 中使用七条受限命名空间通配规则：只匹配包含 `xhscdn.com` 的专属 CNAME 分支，或已观察到的 `ydbdxhsv6` 平台标识；不排除整个 `bdydns.com`、`volcgtm.com`、`cdngslb.com` 等共享厂商区域。路由正文、Claude/Anthropic PROXY 与 skip-proxy 均不变。Shadowrocket 源仅同步三条实测精确别名，不混用 Clash 的中间层通配语法。归档 `sr_ai_secure_final_20261016_4.conf`。
 
-按 [Mihomo 域名通配语义](https://wiki.metacubex.one/handbook/syntax/#_8)实现，并新增真实内核隔离测试：本地受控 UDP DNS 上游返回固定公网地址，六个未写死的新版本/区域别名必须得到公网 A 记录；五个无关厂商、相似拼写、恶意后缀和 AI 对照域名仍得到 fake-IP。测试不使用 TUN，不改系统 DNS，无外网依赖，结束后清理临时内核和 DNS 服务。本机十项 DNS 测试全部通过；无真实 Mihomo 的 CI 会明确 skip 此项，不能当作运行态通过。
+按 [Mihomo 域名通配语义](https://wiki.metacubex.one/handbook/syntax/)实现，并新增真实内核隔离测试：本地受控 UDP DNS 上游返回固定公网地址，六个未写死的新版本/区域别名必须得到公网 A 记录；五个无关厂商、相似拼写、恶意后缀和 AI 对照域名仍得到 fake-IP。测试不使用 TUN，不改系统 DNS，无外网依赖，结束后清理临时内核和 DNS 服务。本机十项 DNS 测试全部通过；无真实 Mihomo 的 CI 会明确 skip 此项，不能当作运行态通过。
+
+
+## 第四版客户最终验收
+
+发布提交 `71b04b245f7493c8b78b307973b908f8bf36aa9f` 的 [GitHub Actions 门禁](https://github.com/SimileciWH/shadowrocket-config/actions/runs/38775772542)通过。支持端通过同一正式更新器获取并校验快照，再经 SSH 传输，客户重新核对归档 SHA256 `575514365e1be0c21251e2404a97eab27072489be4f06cd7c8c2f6d9ff5ead44` 和 manifest 后运行原正式安装器。安装成功、候选内核校验通过且保留备份；任务空闲后加载，未手工编辑客户生成配置。
+
+- 客户运行态确认 TUN 开启，管理规则源为固定发布快照，直连 97 条、代理 12 条。
+- 对主站和 V2/V3/V6 视频域名连续观察 120.6 秒，每 15 秒一次、共九轮，所有系统解析地址均为公网地址。该观察窗口通过，不等同于长期稳定或系统重启验收。
+- 仅重试快照中 19 条既有 DNS 失败任务，全部完成视频下载，本次未再发生 DNS 非公网拒绝。独立读取全部 19 份落盘 MP4，大小及 SHA256 与管线记录一致，FFprobe 均通过，媒体验收 19/19 PASS。
+- 完整任务状态为 12 completed、7 partial；其中六条 `TRANSLATE_TIMEOUT`、一条 `TRANSLATE_UNTRANSLATED`，视频和原文已保留。翻译失败是独立未解决项，未将其记为完整成功，也未追加翻译重试。
+- 加上此前验收的 16 条，累计独立核验 35 份有效视频；任务状态合计 26 completed、9 partial。最初九条的视频均成功，其中原有两条俄文翻译未通过。
+- 未重启 ClipVault 主进程，未取消客户其他下载，未触发 VK 发布。不继续扩大到客户后续新增批次；Windows 和操作系统重启恢复仍未实测。
+
+本轮结论：小红书解析下载受支持；客户此次 DNS 错误来自 Clash fake-IP 及其动态 CDN 别名解析链，正式配置修复已在客户 macOS 上部署并通过上述实际下载和文件验收。脱敏逐文件记录及 DNS 观察记录保存在本地远程支持证据目录，未上传签名源 URL、凭据或客户媒体。
