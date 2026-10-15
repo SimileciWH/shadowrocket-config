@@ -42,7 +42,7 @@ $env:CLASH_MIHOMO_BIN = 'C:\path\to\verge-mihomo.exe'
 
 脚本网络探测只代表探测时正在运行的配置，不能证明刚写入的新扩展已加载。收到 HTTP 403 等响应也不会标为 HTTP 200 成功。
 
-本次修复没有修改 Shadowrocket 分流源或生成的 clash 规则库，因此不需要重新生成或归档分流规则。发布前须单独授权 commit / push；本地脚本修改不会自动更新 CDN。
+本次小红书修复保留 Shadowrocket 分流规则正文，仅更新版本元数据并同步生成文件、归档。发布前须单独授权 commit / push；本地脚本修改不会自动更新 CDN。
 
 ## 一致版本发布
 
@@ -55,3 +55,9 @@ $env:CLASH_MIHOMO_BIN = 'C:\path\to\verge-mihomo.exe'
 `python3 scripts/update_clash.py --download-only` 只验证线上快照，不修改或启动 Clash。`--check` 仍只检查候选和运行状态。直接运行 setup 安装写入会被拒绝，防止与未确认版本的规则混搭。
 
 更新入口保证一次更新使用同一版本，不是后台远程推送服务：已安装设备需要再次执行入口并在 Clash 中重新选择订阅。固定版本的 provider 定时刷新不会迁移到下一个版本。旧 Fastly @main 安装命令应停用。
+
+## 小红书真实 IP 修复（2026-10-16）
+
+客户版和工作版的当前订阅 Merge 均补入 `+.xiaohongshu.com`、`+.xhscdn.com`、`+.xhscdn.net`；生成模板使用同一份域名常量，避免安装器与模板漏同步。系统 DNS 拨测同时覆盖小红书主站和本次实际视频 CDN。
+
+操作顺序：等待客户现有下载完成 → 执行已发布的 `update_clash.py` → 按输出重新激活当前订阅 → 检查主站/CDN 的系统 DNS 全部为公网地址 → 客户重试失败素材并核对文件。支持人员不直接编辑客户生成配置，不为验证强制中断任务。发布前本地改动不会进入客户更新入口。

@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.11)
-# Change: route verified company LAN 172.29.216.0/24 through CORP-WINDOWS before private LAN DIRECT
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16)
+# Change: sync existing Xiaohongshu Real-IP policy into Clash installers and merge templates
 # Total entries: 97
 payload:
   - DOMAIN,ezgo.realsil.com.cn

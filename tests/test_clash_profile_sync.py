@@ -54,6 +54,16 @@ class ProfileSyncTests(unittest.TestCase):
         self.assertEqual(merge['tun']['mtu'], 1500)
         self.assertNotIn('enable', merge['tun'])
 
+    def test_active_profile_receives_xiaohongshu_real_ip_in_both_modes(self):
+        for work in (False, True):
+            with self.subTest(work=work):
+                plan = self.plan(work)
+                merge = json.loads(plan['updates'][self.profiles / 'actual-merge.yaml'])
+                self.assertEqual(merge['dns']['fake-ip-filter-mode'], 'blacklist')
+                self.assertTrue({'+.xiaohongshu.com', '+.xhscdn.com', '+.xhscdn.net'}.issubset(
+                    merge['dns']['fake-ip-filter']))
+                self.assertNotIn(self.profiles / 'old.yaml', plan['updates'])
+
     def test_missing_file_does_not_choose_latest(self):
         (self.profiles / '1759600109019.yaml').unlink()
         with self.assertRaises(ValueError):

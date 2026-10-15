@@ -101,6 +101,18 @@ DOUYIN_REAL_IP_DOMAINS = [
     "+.ibytedtos.com",
 ]
 
+# Keep Xiaohongshu share pages and media on public DNS answers for ClipVault.
+XIAOHONGSHU_REAL_IP_DOMAINS = [
+    "+.xiaohongshu.com",
+    "+.xhscdn.com",
+    "+.xhscdn.net",
+]
+
+REAL_IP_CHECK_HOSTS = [
+    "v.douyin.com", "www.iesdouyin.com", "www.douyin.com",
+    "www.xiaohongshu.com", "sns-video-v6.xhscdn.com",
+]
+
 # 微信核心直连与 Real-IP 域名（防止图片上传、语音通话被 fake-IP 拦截）
 WECHAT_REAL_IP_DOMAINS = [
     "localhost.ptlogin2.qq.com",
@@ -143,7 +155,8 @@ MICROSOFT_REAL_IP_DOMAINS = [
 ]
 
 # 所有需要确保返回真实公网 IP 的目标域名集
-ALL_REAL_IP_DOMAINS = WECHAT_REAL_IP_DOMAINS + DOUYIN_REAL_IP_DOMAINS + MICROSOFT_REAL_IP_DOMAINS
+ALL_REAL_IP_DOMAINS = (WECHAT_REAL_IP_DOMAINS + DOUYIN_REAL_IP_DOMAINS
+                      + XIAOHONGSHU_REAL_IP_DOMAINS + MICROSOFT_REAL_IP_DOMAINS)
 
 # 系统代理 Bypass 核心直连后缀
 BYPASS_LIST_ITEMS = [
@@ -425,7 +438,8 @@ def detect_main_proxy_group(profile_path):
 
 def build_client_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建客户通用纯净版 Merge 扩展内容（根据实际代理组自适应绑定与注入兼容别名）。"""
-    cname_filter = "\n".join(f'    - "{host}"' for host in DOUYIN_CNAME_HOSTS)
+    real_ip_filter = "\n".join(f'    - "{host}"' for host in
+                               DOUYIN_CNAME_HOSTS + XIAOHONGSHU_REAL_IP_DOMAINS)
     if existing_groups is None:
         existing_groups = []
 
@@ -565,8 +579,8 @@ dns:
     - "+.update.microsoft.com"
     - "+.windows.com"
     - "+.s-microsoft.com"
-    # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
-{cname_filter}
+    # Platform share pages and media must resolve to real public IPs.
+{real_ip_filter}
     - "v.douyin.com"
     - "www.iesdouyin.com"
     - "www.douyin.com"
@@ -585,7 +599,8 @@ dns:
 
 def build_work_merge_content(main_group: str = "DIRECT", existing_groups: list[str] = None) -> str:
     """构建个人工作定制版 Merge 扩展内容（包含公司 1088 SSH 隧道与自适应代理组）。"""
-    cname_filter = "\n".join(f'    - "{host}"' for host in DOUYIN_CNAME_HOSTS)
+    real_ip_filter = "\n".join(f'    - "{host}"' for host in
+                               DOUYIN_CNAME_HOSTS + XIAOHONGSHU_REAL_IP_DOMAINS)
     if existing_groups is None:
         existing_groups = []
 
@@ -742,8 +757,8 @@ dns:
     - "+.update.microsoft.com"
     - "+.windows.com"
     - "+.s-microsoft.com"
-    # 抖音全系核心域名直连（返回真实 IP，彻底防止 ClipVault / 爬虫因 fake-ip 判定非公网拒绝连接）
-{cname_filter}
+    # Platform share pages and media must resolve to real public IPs.
+{real_ip_filter}
     - "v.douyin.com"
     - "www.iesdouyin.com"
     - "www.douyin.com"
@@ -1374,15 +1389,12 @@ def main():
     else:
         print(f"\n[{BLUE}INFO{RESET}] Clash 代理端口 {mixed_port} 当前未在监听（内核未启动），尚未验证配置加载和网络可用性。")
 
-    # 8.2 核心域名 Real-IP DNS 深度拨测（确保 v.douyin.com / www.iesdouyin.com / www.douyin.com 绝不返回 198.18.x.x）
-    douyin_dns_status = {}
-    test_dns_domains = ["v.douyin.com", "www.iesdouyin.com", "www.douyin.com"]
+    # Check the same system resolver path used by applications on both platforms.
     print(f"\n{BOLD}正在检测核心域名 Real-IP 解析状态 (保障非 198.18.x.x Fake-IP)...{RESET}")
-    for d in test_dns_domains:
+    for d in REAL_IP_CHECK_HOSTS:
         # Direct DNS queries can pass while getaddrinfo follows a fake-IP CNAME.
         addresses, is_real = system_dns_status(d)
         resolved_ip = ", ".join(addresses) if addresses else None
-        douyin_dns_status[d] = (resolved_ip, is_real)
         
         if is_real:
             print(f"  - {d:<22}: {GREEN}真实公网 IP ({resolved_ip}){RESET}")
@@ -1390,8 +1402,6 @@ def main():
             print(f"  - {d:<22}: {RED}非公网/Fake-IP 拦截 ({resolved_ip}){RESET} -> 请刷新配置")
         else:
             print(f"  - {d:<22}: {YELLOW}解析等待中{RESET}")
-
-    all_douyin_real = all(st[1] for st in douyin_dns_status.values()) if douyin_dns_status else False
 
     print("\n验收状态：")
     print("  扩展文件：" + ("已准备，未写入" if check_only else "已写入并备份"))

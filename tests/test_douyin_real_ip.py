@@ -11,6 +11,7 @@ setup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(setup)
 
 HOST = 'www.iesdouyin.com.bytedns1.com'
+XHS_DOMAINS = {'+.xiaohongshu.com', '+.xhscdn.com', '+.xhscdn.net'}
 
 
 def records(*addresses):
@@ -18,6 +19,18 @@ def records(*addresses):
 
 
 class DouyinRealIPTests(unittest.TestCase):
+    def test_xiaohongshu_real_ip_in_both_installers_and_generated_templates(self):
+        self.assertTrue({'www.xiaohongshu.com', 'sns-video-v6.xhscdn.com'}.issubset(
+            setup.REAL_IP_CHECK_HOSTS))
+        for builder in (setup.build_client_merge_content, setup.build_work_merge_content):
+            dns = setup.load_yaml(builder())['dns']
+            self.assertEqual(dns['fake-ip-filter-mode'], 'blacklist')
+            self.assertTrue(XHS_DOMAINS.issubset(dns['fake-ip-filter']))
+        for name in ('client_merge_template.yaml', 'work_merge_template.yaml', 'clash_merge_template.yaml'):
+            dns = setup.load_yaml((ROOT / 'clash' / name).read_text())['dns']
+            self.assertEqual(dns['fake-ip-filter-mode'], 'blacklist')
+            self.assertTrue(XHS_DOMAINS.issubset(dns['fake-ip-filter']))
+
     def test_cname_covered_in_installer_and_both_builders(self):
         self.assertIn(HOST, setup.DOUYIN_REAL_IP_DOMAINS)
         for builder in (setup.build_client_merge_content, setup.build_work_merge_content):
