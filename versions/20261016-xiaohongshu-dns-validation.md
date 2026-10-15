@@ -14,7 +14,7 @@
 - 更新后的系统 DNS 拨测同时检查小红书主站和实际视频域名。
 - 客户依旧通过既有 `update_clash.py` 获取同一提交的已校验快照。脚本不自动重载运行内核；客户等待任务完成后更新并手动重新激活当前订阅。
 
-## 验证
+## 初版准备时的验证记录
 
 | 项目 | 结果 | 实际证据与限制 |
 |---|---|---|
@@ -51,3 +51,16 @@ python3 -c "import socket; [print(h, sorted({r[4][0] for r in socket.getaddrinfo
 2. 运行服务内核 `/providers/rules` 的两份管理规则均 ruleCount=0，应用日志提示缓存未同步。Clash 2.5.8 [运行包实现](https://github.com/clash-verge-rev/clash-verge-rev/blob/v2.5.8/src-tauri/src/core/runtime_bundle.rs)将 HTTP provider 声明为需内核下载的远程缓存，不把应用目录已有快照作为本地资产复制；file provider 则复制本地资产。第二版将正式更新器已经校验的快照用 `type: file` 部署，并清除管理规则源的历史 URL / interval，保留其他自定义规则源。
 
 新增/加强测试先分别复现漏别名和仍部署 HTTP provider 两项失败，修改后 31 项相关回归通过。归档为 `sr_ai_secure_final_20261016_2.conf`，版本 `2026.10.16.2`。第二版客户运行态和实际下载结果须以远程执行回执为准，本节不预先标为通过。
+
+## 第二版客户实测结果（2026-10-16）
+
+正式入口部署提交 `465c3c7889024fc6d5a0fe7494477ff68e4e3832`，发布门禁通过。客户侧更新器退出 0、生成备份、候选内核校验通过；由支持人员通过 SSH 重启 Clash 自身加载，未手工修改客户生成配置。
+
+- 运行服务内核 `/configs` 确认 TUN enable=true；`/providers/rules` 确认 `sr-direct` 97 条、`sr-proxy` 12 条，管理规则源为 file provider。
+- 主站、视频 CDN 和四个已观察 CNAME 的系统解析均为公网 IP，不再返回 fake-IP。
+- 用户给定 9 条在客户现有 ClipVault 1.8.4 中均已实际解析、下载，`media_validated_this_attempt=true`。保留已完成或已在途结果，不重复下载；对原 DNS 失败任务使用应用自有重试接口，超时后先读取状态确认服务端已受理，不盲目重发。
+- 独立读取 9 份落盘 MP4，大小及 SHA256 均与管线记录一致，独立 FFprobe 通过，均为 720×1280 H.264；媒体验证结果 9/9 PASS。
+- 任务状态为 7 completed、2 partial。两项 partial 为 `TRANSLATE_UNTRANSLATED`，分别对应作品 `6ac794c0000000000a0277ba`、`6aca3efe000000000b007c43`；视频均有效，俄文翻译未通过，不能把 9 条都称为完整任务完成。这是独立于 DNS 的后续边界。
+- ClipVault 主进程未重启，未取消其他任务。检测到客户新启动的任务时，复测提交前停止；既有任务结束后继续。客户又开始批量小红书任务时保留进度，仅只读核实已完成样本。VK 定时发布关闭，未发起发布。
+
+结论：本轮小红书 DNS 配置修复已在客户端通过真实下载和实际文件核验。操作系统重启恢复、Windows 实机以及其余批量任务不在此 9 条验收结论内；俄文翻译两项仍未通过。完整逐文件摘要留存于本地远程支持证据，不包含入网密钥、Cookie 或带签名源 URL。
