@@ -103,6 +103,9 @@ DOUYIN_REAL_IP_DOMAINS = [
 
 # Keep Xiaohongshu share pages and media on public DNS answers for ClipVault.
 XIAOHONGSHU_CNAME_HOSTS = [
+    "sns-video-v2.xhscdn.com.w.cdngslb.com",
+    "sns-video-bd.xhscdn.com.c8c10c27.cm.bdydns.com",
+    "hcdnv.ydbdxhsv6.cm.bdydns.com",
     "sns-video-v3.xhscdn.com.a.bdydns.com",
     "opencdnxhsvod1.jomodns.com",
     "sns-video-v6.xhscdn.com.volcgslb.com",
@@ -110,8 +113,20 @@ XIAOHONGSHU_CNAME_HOSTS = [
     "sns-video-hs.xhscdn.com.m.v05.volcgtm.com",
     "hcdnv.ydbdxhsv6.m.v05.volcgtm.com",
 ]
+# Restrict changing CDN aliases to Xiaohongshu-owned name namespaces.
+# Never exclude entire third-party CDN vendor zones from fake-IP.
+XIAOHONGSHU_CNAME_FAMILIES = [
+    "+.xhscdn.com.a.bdydns.com",
+    "+.xhscdn.com.*.*.bdydns.com",
+    "+.xhscdn.com.w.cdngslb.com",
+    "+.xhscdn.com.volcgslb.com",
+    "+.xhscdn.com.*.*.volcgtm.com",
+    "+.ydbdxhsv6.*.bdydns.com",
+    "+.ydbdxhsv6.*.*.volcgtm.com",
+]
 XIAOHONGSHU_REAL_IP_DOMAINS = [
     *XIAOHONGSHU_CNAME_HOSTS,
+    *XIAOHONGSHU_CNAME_FAMILIES,
     "+.xiaohongshu.com",
     "+.xhscdn.com",
     "+.xhscdn.net",
@@ -119,7 +134,8 @@ XIAOHONGSHU_REAL_IP_DOMAINS = [
 
 REAL_IP_CHECK_HOSTS = [
     "v.douyin.com", "www.iesdouyin.com", "www.douyin.com",
-    "www.xiaohongshu.com", "sns-video-v3.xhscdn.com", "sns-video-v6.xhscdn.com",
+    "www.xiaohongshu.com", "sns-video-v2.xhscdn.com",
+    "sns-video-v3.xhscdn.com", "sns-video-v6.xhscdn.com",
 ]
 
 # 微信核心直连与 Real-IP 域名（防止图片上传、语音通话被 fake-IP 拦截）

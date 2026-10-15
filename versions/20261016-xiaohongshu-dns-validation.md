@@ -70,3 +70,24 @@ python3 -c "import socket; [print(h, sorted({r[4][0] for r in socket.getaddrinfo
 继续观察客户自行运行的其他小红书任务，发现 7 条在下载阶段报 `DNS_NON_PUBLIC`，脱敏诊断均指向 `sns-video-v3.xhscdn.com`，与已通过的 9 条使用的 V6 CDN 不同。客户系统实际查询别名 `sns-video-v3.xhscdn.com.a.bdydns.com` 返回 `198.18.0.27`；可信 HTTPS DNS 同时核实后继别名 `opencdnxhsvod1.jomodns.com` 及其公网 A 记录。
 
 第三版 `2026.10.16.3` 仅将这两个实测精确别名加入真实 IP 规则，同时在更新器 DNS 拨测中加入 V3 入口；不添加整个 `bdydns.com` / `jomodns.com` 厂商后缀。归档 `sr_ai_secure_final_20261016_3.conf`。先复现新检查失败，修改后 9 项 DNS 回归通过。第三版仍经正式入口部署，客户其余任务完成后再加载，不直接改生成配置。V3 实际复测结果另以远程支持回执记录。
+
+## 第三版部署与补充验收
+
+提交 `dca1ea80217da7f424a2b491d1a93fe0ef218a90` 发布校验通过。客户在线更新先后遇到 GitHub 超时和 TLS EOF，失败日志保留，均发生在配置写入前。改为支持端调用同一更新器的 `latest_release` / `download_snapshot` 验证最新提交、发布门禁及 Git blob 哈希；经已核实主机指纹的 SSH 传送快照，客户侧再验证归档 SHA256 与 manifest，并使用原正式安装器的 `SR_RELEASE_SHA` / `SR_RELEASE_DIR` 输入安装。不是直接修改客户 YAML，也未跳过发布或候选校验。
+
+- 传送快照归档 SHA256：`a5ba892f2fc1a69bd6af81db6557ac3f4a751d70639ca102bcf68d625729168a`。
+- 正式安装器退出 0、备份保留、候选通过内核校验。客户任务空闲后才重新加载 Clash；实际 TUN 开启，97 条直连、12 条代理规则已加载。
+- V3、V6 入口及新增 V3 两个 CNAME 系统解析全部为公网 IP。
+- 原来另报 DNS 错误的 7 条任务全部 completed，均完成视频、正文和俄文文案；独立读取全部 7 份 MP4，大小/SHA256 与媒体记录一致，FFprobe 通过。
+- 本轮这 7 次实际媒体传输为 V2 CDN 六次、V3 CDN 一次，均成功；不能把解析器切换到 V2 的六次记成 V3 传输验证。
+- 加上最初 9 条，本次独立文件核验覆盖 16 条，16/16 视频有效；任务结果为 14 completed、2 partial（原九条中的俄文翻译未通过），不把媒体成功扩大为全部翻译成功。
+
+更新操作规范同步调整为：下载、校验期间保留所需代理网络，不切换订阅或编辑扩展；写入成功且任务空闲后再加载。客户正常在线更新仍使用既有入口。此次特殊网络失败由支持端传送同一已验证快照完成，没有更改客户账号、订阅凭据或全局代理环境变量。
+
+## 新批次的稳定性边界与第四版
+
+第三版 16 条视频已通过，不代表持续稳定。客户继续新增一批任务后，出现新的 V2/V3 下载 DNS 拒绝；配置和内核没有回退，系统解析链新增 `sns-video-v2.xhscdn.com.w.cdngslb.com`、`sns-video-bd.xhscdn.com.c8c10c27.cm.bdydns.com`、`hcdnv.ydbdxhsv6.cm.bdydns.com`。这说明继续逐条列举叶子别名不能覆盖 CDN 版本、区域和中间标签变化。
+
+第四版 `2026.10.16.4` 在 Clash 中使用七条受限命名空间通配规则：只匹配包含 `xhscdn.com` 的专属 CNAME 分支，或已观察到的 `ydbdxhsv6` 平台标识；不排除整个 `bdydns.com`、`volcgtm.com`、`cdngslb.com` 等共享厂商区域。路由正文、Claude/Anthropic PROXY 与 skip-proxy 均不变。Shadowrocket 源仅同步三条实测精确别名，不混用 Clash 的中间层通配语法。归档 `sr_ai_secure_final_20261016_4.conf`。
+
+按 [Mihomo 域名通配语义](https://wiki.metacubex.one/handbook/syntax/#_8)实现，并新增真实内核隔离测试：本地受控 UDP DNS 上游返回固定公网地址，六个未写死的新版本/区域别名必须得到公网 A 记录；五个无关厂商、相似拼写、恶意后缀和 AI 对照域名仍得到 fake-IP。测试不使用 TUN，不改系统 DNS，无外网依赖，结束后清理临时内核和 DNS 服务。本机十项 DNS 测试全部通过；无真实 Mihomo 的 CI 会明确 skip 此项，不能当作运行态通过。

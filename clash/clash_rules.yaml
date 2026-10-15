@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.3)
-# Change: cover observed Xiaohongshu V3 and V6 CDN CNAME chains with verified service-mode file snapshots
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.4)
+# Change: scope Real-IP exclusions to Xiaohongshu CNAME namespaces across changing CDN aliases
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
