@@ -103,6 +103,8 @@ DOUYIN_REAL_IP_DOMAINS = [
 
 # Keep Xiaohongshu share pages and media on public DNS answers for ClipVault.
 XIAOHONGSHU_CNAME_HOSTS = [
+    "sns-video-v3.xhscdn.com.a.bdydns.com",
+    "opencdnxhsvod1.jomodns.com",
     "sns-video-v6.xhscdn.com.volcgslb.com",
     "sns-video-v6.xhscdn.com.m.v19.volcgtm.com",
     "sns-video-hs.xhscdn.com.m.v05.volcgtm.com",
@@ -117,7 +119,7 @@ XIAOHONGSHU_REAL_IP_DOMAINS = [
 
 REAL_IP_CHECK_HOSTS = [
     "v.douyin.com", "www.iesdouyin.com", "www.douyin.com",
-    "www.xiaohongshu.com", "sns-video-v6.xhscdn.com",
+    "www.xiaohongshu.com", "sns-video-v3.xhscdn.com", "sns-video-v6.xhscdn.com",
 ]
 
 # 微信核心直连与 Real-IP 域名（防止图片上传、语音通话被 fake-IP 拦截）

@@ -126,6 +126,8 @@ dns:
     - "+.bytednsdoc.com"
     - "+.byteimg.com"
     - "+.ibytedtos.com"
+    - "sns-video-v3.xhscdn.com.a.bdydns.com"
+    - "opencdnxhsvod1.jomodns.com"
     - "sns-video-v6.xhscdn.com.volcgslb.com"
     - "sns-video-v6.xhscdn.com.m.v19.volcgtm.com"
     - "sns-video-hs.xhscdn.com.m.v05.volcgtm.com"

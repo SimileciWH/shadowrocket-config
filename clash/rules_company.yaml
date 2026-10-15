@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.2)
-# Change: exclude observed Xiaohongshu CNAME fake-IP aliases and deploy verified file providers for service mode
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.3)
+# Change: cover observed Xiaohongshu V3 and V6 CDN CNAME chains with verified service-mode file snapshots
 # Total entries: 6
 payload:
   - DOMAIN-SUFFIX,realtek.com

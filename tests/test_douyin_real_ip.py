@@ -13,6 +13,8 @@ spec.loader.exec_module(setup)
 HOST = 'www.iesdouyin.com.bytedns1.com'
 XHS_DOMAINS = {'+.xiaohongshu.com', '+.xhscdn.com', '+.xhscdn.net'}
 XHS_CNAME_HOSTS = {
+    'sns-video-v3.xhscdn.com.a.bdydns.com',
+    'opencdnxhsvod1.jomodns.com',
     'sns-video-v6.xhscdn.com.volcgslb.com',
     'sns-video-v6.xhscdn.com.m.v19.volcgtm.com',
     'sns-video-hs.xhscdn.com.m.v05.volcgtm.com',
@@ -26,7 +28,8 @@ def records(*addresses):
 
 class DouyinRealIPTests(unittest.TestCase):
     def test_xiaohongshu_real_ip_in_both_installers_and_generated_templates(self):
-        self.assertTrue({'www.xiaohongshu.com', 'sns-video-v6.xhscdn.com'}.issubset(
+        self.assertTrue({'www.xiaohongshu.com', 'sns-video-v3.xhscdn.com',
+                         'sns-video-v6.xhscdn.com'}.issubset(
             setup.REAL_IP_CHECK_HOSTS))
         for builder in (setup.build_client_merge_content, setup.build_work_merge_content):
             dns = setup.load_yaml(builder())['dns']

@@ -64,3 +64,9 @@ python3 -c "import socket; [print(h, sorted({r[4][0] for r in socket.getaddrinfo
 - ClipVault 主进程未重启，未取消其他任务。检测到客户新启动的任务时，复测提交前停止；既有任务结束后继续。客户又开始批量小红书任务时保留进度，仅只读核实已完成样本。VK 定时发布关闭，未发起发布。
 
 结论：本轮小红书 DNS 配置修复已在客户端通过真实下载和实际文件核验。操作系统重启恢复、Windows 实机以及其余批量任务不在此 9 条验收结论内；俄文翻译两项仍未通过。完整逐文件摘要留存于本地远程支持证据，不包含入网密钥、Cookie 或带签名源 URL。
+
+## 后续批量暴露的 V3 CDN 别名
+
+继续观察客户自行运行的其他小红书任务，发现 7 条在下载阶段报 `DNS_NON_PUBLIC`，脱敏诊断均指向 `sns-video-v3.xhscdn.com`，与已通过的 9 条使用的 V6 CDN 不同。客户系统实际查询别名 `sns-video-v3.xhscdn.com.a.bdydns.com` 返回 `198.18.0.27`；可信 HTTPS DNS 同时核实后继别名 `opencdnxhsvod1.jomodns.com` 及其公网 A 记录。
+
+第三版 `2026.10.16.3` 仅将这两个实测精确别名加入真实 IP 规则，同时在更新器 DNS 拨测中加入 V3 入口；不添加整个 `bdydns.com` / `jomodns.com` 厂商后缀。归档 `sr_ai_secure_final_20261016_3.conf`。先复现新检查失败，修改后 9 项 DNS 回归通过。第三版仍经正式入口部署，客户其余任务完成后再加载，不直接改生成配置。V3 实际复测结果另以远程支持回执记录。

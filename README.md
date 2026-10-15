@@ -134,7 +134,7 @@ $ErrorActionPreference = 'Stop'; Invoke-WebRequest https://raw.githubusercontent
 * 本轮案例及验证边界见 [抖音 CNAME 假 IP 修复记录](versions/20261005-douyin-cname-validation.md)。
 * **重启恢复**：DNS 规则必须保存到当前配置的持久 Merge 扩展，并验证重新激活后仍生效。需要登录后自动恢复代理时，启用 Clash 自动启动或已验证的用户登录启动任务；本一键脚本不会自动更改登录项。
 
-**小红书下载报“DNS 返回非公网地址”**：客户版和工作版安装器、三份 Merge 模板均将 `+.xiaohongshu.com`、`+.xhscdn.com`、`+.xhscdn.net` 和实际观察到的四个精确 CNAME 别名加入真实 IP 排除项。别名仅增加真实 IP 排除，不扩大到 CDN 厂商后缀；源配置原有的小红书直连路由保持不变。修复必须通过更新入口写入当前订阅扩展，再重新激活订阅；只刷新远程路由规则不能补齐 DNS 设置。安装器使用已校验的本地 file provider，支持 Clash 服务模式启动时携带规则快照。
+**小红书下载报“DNS 返回非公网地址”**：客户版和工作版安装器、三份 Merge 模板均将 `+.xiaohongshu.com`、`+.xhscdn.com`、`+.xhscdn.net` 和实际观察到的六个精确 CNAME 别名加入真实 IP 排除项。别名仅增加真实 IP 排除，不扩大到 CDN 厂商后缀；源配置原有的小红书直连路由保持不变。修复必须通过更新入口写入当前订阅扩展，再重新激活订阅；只刷新远程路由规则不能补齐 DNS 设置。安装器使用已校验的本地 file provider，支持 Clash 服务模式启动时携带规则快照。
 
 客户先等待现有下载完成，再执行场景一的更新命令。脚本不会自动重载正在运行的 Clash；写入后按提示重新选择当前订阅，并检查以下结果全部为公网地址，然后手动重试失败素材：
 
