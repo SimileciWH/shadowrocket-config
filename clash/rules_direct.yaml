@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.1)
-# Change: route raymx-micro.com via CORP-WINDOWS for company intranet access
-# Total entries: 97
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.2)
+# Change: drop redundant rules already covered by a wider rule with the same policy
+# Total entries: 84
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -16,9 +16,6 @@ payload:
   - IP-CIDR,111.231.15.226/32,no-resolve
   - IP-CIDR,224.0.0.251/32,no-resolve
   - IP-CIDR,239.255.255.250/32,no-resolve
-  - DOMAIN,7.tcp.vip.cpolar.cn
-  - DOMAIN-SUFFIX,cpolar.top
-  - DOMAIN-SUFFIX,cpolar.com
   - DOMAIN-KEYWORD,cpolar
   - DOMAIN-SUFFIX,feishu.cn
   - DOMAIN-SUFFIX,feishucdn.com
@@ -71,22 +68,12 @@ payload:
   - DOMAIN-KEYWORD,qpic
   - DOMAIN-SUFFIX,qq.com
   - DOMAIN-SUFFIX,qq.com.cn
-  - DOMAIN-SUFFIX,weixin.com
-  - DOMAIN-SUFFIX,wechat.com
-  - DOMAIN-SUFFIX,weixinbridge.com
-  - DOMAIN-SUFFIX,servicewechat.com
-  - DOMAIN-SUFFIX,wechatpay.cn
   - DOMAIN-SUFFIX,tenpay.com
-  - DOMAIN-SUFFIX,qpic.cn
-  - DOMAIN-SUFFIX,qpic.com
-  - DOMAIN-SUFFIX,wechatos.net
   - DOMAIN-SUFFIX,gtimg.cn
   - DOMAIN-SUFFIX,gtimg.com
   - DOMAIN-SUFFIX,qlogo.cn
   - DOMAIN-SUFFIX,tencent.com
   - DOMAIN-SUFFIX,myqcloud.com
-  - DOMAIN,dns.weixin.qq.com.cn
-  - DOMAIN-SUFFIX,cloud.tencent.com
   - DOMAIN-SUFFIX,qcloudimg.tencent-cloud.cn
   - DOMAIN-SUFFIX,cloudcache.tencent-cloud.com
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn
