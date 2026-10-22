@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.1)
-# Change: route raymx-micro.com via CORP-WINDOWS for company intranet access
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.2)
+# Change: drop redundant rules already covered by a wider rule with the same policy
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -48,19 +48,14 @@ rules:
   # Russian destinations use the existing JustG node, independently of the default proxy.
   # Keep VK login, API and media on the same Russian VPS exit.
   - DOMAIN-SUFFIX,vk.com,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vk.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk.me,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk.cc,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkontakte.com,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkontakte.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,mvk.com,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkvideo.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk.link,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk.design,justg-vps-RU-direct
   - DOMAIN-SUFFIX,userapi.com,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,userapi.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,cdn-vk.net,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,cdn-vk.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk-cdn.me,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk-cdn.net,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vk-portal.net,justg-vps-RU-direct
@@ -69,18 +64,12 @@ rules:
   - DOMAIN-SUFFIX,vkuser.net,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkuseraudio.com,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkuseraudio.net,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkuseraudio.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkuserlive.com,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkuserlive.net,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkuserphoto.ru,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkusercdn.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkuservideo.com,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkuservideo.net,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkuservideo.ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkmessenger.app,justg-vps-RU-direct
   - DOMAIN-SUFFIX,vkmessenger.com,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vkcloud-static.ru,justg-vps-RU-direct
-  - DOMAIN-SUFFIX,vktech-static.ru,justg-vps-RU-direct
   # Russian domain suffixes remain available without downloading a ruleset.
   - DOMAIN-SUFFIX,ru,justg-vps-RU-direct
   - DOMAIN-SUFFIX,su,justg-vps-RU-direct
@@ -88,9 +77,6 @@ rules:
   # Pinned Russian service-domain snapshot; includes non-.ru domains.
   - RULE-SET,https://raw.githubusercontent.com/MetaCubeX/meta-rules-dat/f77c0e1442146059a2c6357721f43d19542d1734/geo/geosite/classical/category-ru.list,justg-vps-RU-direct
   # cpolar / remote desktop tunnel direct
-  - DOMAIN,7.tcp.vip.cpolar.cn,DIRECT
-  - DOMAIN-SUFFIX,cpolar.top,DIRECT
-  - DOMAIN-SUFFIX,cpolar.com,DIRECT
   - DOMAIN-KEYWORD,cpolar,DIRECT
   # Feishu / Lark direct
   - DOMAIN-SUFFIX,feishu.cn,DIRECT
@@ -162,23 +148,13 @@ rules:
   - DOMAIN-KEYWORD,qpic,DIRECT
   - DOMAIN-SUFFIX,qq.com,DIRECT
   - DOMAIN-SUFFIX,qq.com.cn,DIRECT
-  - DOMAIN-SUFFIX,weixin.com,DIRECT
-  - DOMAIN-SUFFIX,wechat.com,DIRECT
-  - DOMAIN-SUFFIX,weixinbridge.com,DIRECT
-  - DOMAIN-SUFFIX,servicewechat.com,DIRECT
-  - DOMAIN-SUFFIX,wechatpay.cn,DIRECT
   - DOMAIN-SUFFIX,tenpay.com,DIRECT
-  - DOMAIN-SUFFIX,qpic.cn,DIRECT
-  - DOMAIN-SUFFIX,qpic.com,DIRECT
-  - DOMAIN-SUFFIX,wechatos.net,DIRECT
   - DOMAIN-SUFFIX,gtimg.cn,DIRECT
   - DOMAIN-SUFFIX,gtimg.com,DIRECT
   - DOMAIN-SUFFIX,qlogo.cn,DIRECT
   - DOMAIN-SUFFIX,tencent.com,DIRECT
   - DOMAIN-SUFFIX,myqcloud.com,DIRECT
-  - DOMAIN,dns.weixin.qq.com.cn,DIRECT
   # Tencent Cloud direct
-  - DOMAIN-SUFFIX,cloud.tencent.com,DIRECT
   - DOMAIN-SUFFIX,qcloudimg.tencent-cloud.cn,DIRECT
   - DOMAIN-SUFFIX,cloudcache.tencent-cloud.com,DIRECT
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn,DIRECT
