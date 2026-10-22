@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.4)
-# Change: scope Real-IP exclusions to Xiaohongshu CNAME namespaces across changing CDN aliases
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.1)
+# Change: route raymx-micro.com via CORP-WINDOWS for company intranet access
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -9,6 +9,7 @@ rules:
   - DOMAIN-SUFFIX,realtek.com,CORP-WINDOWS
   - DOMAIN-SUFFIX,realsil.com.cn,CORP-WINDOWS
   - DOMAIN-SUFFIX,rtkbf.com,CORP-WINDOWS
+  - DOMAIN-SUFFIX,raymx-micro.com,CORP-WINDOWS
   - IP-CIDR,172.26.75.18/32,CORP-WINDOWS,no-resolve
   - IP-CIDR,172.26.75.27/32,CORP-WINDOWS,no-resolve
   # Verified on both work Windows hosts; do not expand to all RFC1918 ranges.

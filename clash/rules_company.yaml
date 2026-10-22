@@ -1,11 +1,12 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.16.4)
-# Change: scope Real-IP exclusions to Xiaohongshu CNAME namespaces across changing CDN aliases
-# Total entries: 6
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.1)
+# Change: route raymx-micro.com via CORP-WINDOWS for company intranet access
+# Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com
   - DOMAIN-SUFFIX,realsil.com.cn
   - DOMAIN-SUFFIX,rtkbf.com
+  - DOMAIN-SUFFIX,raymx-micro.com
   - IP-CIDR,172.26.75.18/32,no-resolve
   - IP-CIDR,172.26.75.27/32,no-resolve
   - IP-CIDR,172.29.216.0/24,no-resolve
