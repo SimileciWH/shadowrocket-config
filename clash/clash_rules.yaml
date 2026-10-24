@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.22.1)
-# Change: route raymx-micro.com via CORP-WINDOWS for company intranet access
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.1)
+# Change: route ahzwfw.gov.cn direct
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -130,6 +130,8 @@ rules:
   - DOMAIN-SUFFIX,workbuddy.cn,DIRECT
   # AHZSKS / 安徽省教育招生考试院 direct
   - DOMAIN-SUFFIX,ahzsks.cn,DIRECT
+  # AHZWFW / 安徽政务服务网 direct
+  - DOMAIN-SUFFIX,ahzwfw.gov.cn,DIRECT
   # Quark Browser / 夸克浏览器 direct
   - DOMAIN-SUFFIX,myquark.cn,DIRECT
   - DOMAIN-SUFFIX,quark.cn,DIRECT
