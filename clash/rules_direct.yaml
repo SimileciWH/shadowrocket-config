@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.1)
-# Change: route ahzwfw.gov.cn direct
-# Total entries: 98
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.2)
+# Change: route ah-amr.cn, ah.gov.cn, and jiashule.com CNAMEs direct for ahzwfw.gov.cn online service
+# Total entries: 101
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -47,6 +47,9 @@ payload:
   - DOMAIN-SUFFIX,workbuddy.cn
   - DOMAIN-SUFFIX,ahzsks.cn
   - DOMAIN-SUFFIX,ahzwfw.gov.cn
+  - DOMAIN-SUFFIX,ah-amr.cn
+  - DOMAIN-SUFFIX,ah.gov.cn
+  - DOMAIN-SUFFIX,jiashule.com
   - DOMAIN-SUFFIX,myquark.cn
   - DOMAIN-SUFFIX,quark.cn
   - DOMAIN-SUFFIX,alipay.com

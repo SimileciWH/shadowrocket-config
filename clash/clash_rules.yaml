@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.1)
-# Change: route ahzwfw.gov.cn direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.2)
+# Change: route ah-amr.cn, ah.gov.cn, and jiashule.com CNAMEs direct for ahzwfw.gov.cn online service
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -130,8 +130,11 @@ rules:
   - DOMAIN-SUFFIX,workbuddy.cn,DIRECT
   # AHZSKS / 安徽省教育招生考试院 direct
   - DOMAIN-SUFFIX,ahzsks.cn,DIRECT
-  # AHZWFW / 安徽政务服务网 direct
+  # AHZWFW / 安徽政务服务网 & 安徽省市场主体登记全程网办 & 创宇盾 CNAME direct
   - DOMAIN-SUFFIX,ahzwfw.gov.cn,DIRECT
+  - DOMAIN-SUFFIX,ah-amr.cn,DIRECT
+  - DOMAIN-SUFFIX,ah.gov.cn,DIRECT
+  - DOMAIN-SUFFIX,jiashule.com,DIRECT
   # Quark Browser / 夸克浏览器 direct
   - DOMAIN-SUFFIX,myquark.cn,DIRECT
   - DOMAIN-SUFFIX,quark.cn,DIRECT
