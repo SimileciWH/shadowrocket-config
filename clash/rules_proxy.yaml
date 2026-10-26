@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: PROXY (Claude / Anthropic / AI)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.2)
-# Change: route ah-amr.cn, ah.gov.cn, and jiashule.com CNAMEs direct for ahzwfw.gov.cn online service
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.26)
+# Change: route tailscale.com and tailscale.io direct with always-real-ip to prevent fake-IP breaking Tailscale control plane and DERP
 # Total entries: 12
 payload:
   - DOMAIN-SUFFIX,claude.ai

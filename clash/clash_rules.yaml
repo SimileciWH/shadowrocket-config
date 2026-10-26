@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.2)
-# Change: route ah-amr.cn, ah.gov.cn, and jiashule.com CNAMEs direct for ahzwfw.gov.cn online service
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.26)
+# Change: route tailscale.com and tailscale.io direct with always-real-ip to prevent fake-IP breaking Tailscale control plane and DERP
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -24,7 +24,9 @@ rules:
   - DOMAIN-SUFFIX,local,DIRECT
   - DOMAIN-SUFFIX,lan,DIRECT
   - DOMAIN-SUFFIX,arpa,DIRECT
-  # Tailscale Private DERP Relay (Tencent Cloud Shanghai)
+  # Tailscale Control Plane & Private DERP Relay (Tencent Cloud Shanghai)
+  - DOMAIN-SUFFIX,tailscale.com,DIRECT
+  - DOMAIN-SUFFIX,tailscale.io,DIRECT
   - IP-CIDR,111.231.15.226/32,DIRECT,no-resolve
   # Bonjour / mDNS / SSDP
   - IP-CIDR,224.0.0.251/32,DIRECT,no-resolve

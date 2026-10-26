@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.25.2)
-# Change: route ah-amr.cn, ah.gov.cn, and jiashule.com CNAMEs direct for ahzwfw.gov.cn online service
-# Total entries: 101
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.26)
+# Change: route tailscale.com and tailscale.io direct with always-real-ip to prevent fake-IP breaking Tailscale control plane and DERP
+# Total entries: 103
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -13,6 +13,8 @@ payload:
   - DOMAIN-SUFFIX,local
   - DOMAIN-SUFFIX,lan
   - DOMAIN-SUFFIX,arpa
+  - DOMAIN-SUFFIX,tailscale.com
+  - DOMAIN-SUFFIX,tailscale.io
   - IP-CIDR,111.231.15.226/32,no-resolve
   - IP-CIDR,224.0.0.251/32,no-resolve
   - IP-CIDR,239.255.255.250/32,no-resolve
