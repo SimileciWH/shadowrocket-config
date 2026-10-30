@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.26)
-# Change: route tailscale.com and tailscale.io direct with always-real-ip to prevent fake-IP breaking Tailscale control plane and DERP
-# Total entries: 103
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.30)
+# Change: route 111.231.15.226 direct (with resolved-IP fallback) and add domestic public DNS (223.5.5.5, 119.29.29.29) and DoH fallback
+# Total entries: 108
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -16,6 +16,10 @@ payload:
   - DOMAIN-SUFFIX,tailscale.com
   - DOMAIN-SUFFIX,tailscale.io
   - IP-CIDR,111.231.15.226/32,no-resolve
+  - IP-CIDR,223.5.5.5/32,no-resolve
+  - IP-CIDR,119.29.29.29/32,no-resolve
+  - DOMAIN,doh.pub
+  - DOMAIN,dns.alidns.com
   - IP-CIDR,224.0.0.251/32,no-resolve
   - IP-CIDR,239.255.255.250/32,no-resolve
   - DOMAIN,7.tcp.vip.cpolar.cn
@@ -106,3 +110,4 @@ payload:
   - DOMAIN-SUFFIX,msftncsi.com
   - DOMAIN-SUFFIX,windows.com
   - DOMAIN-SUFFIX,s-microsoft.com
+  - IP-CIDR,111.231.15.226/32

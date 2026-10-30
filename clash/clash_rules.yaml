@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.26)
-# Change: route tailscale.com and tailscale.io direct with always-real-ip to prevent fake-IP breaking Tailscale control plane and DERP
+# Synced from: sr_ai_secure_final.conf (Version: 2026.10.30)
+# Change: route 111.231.15.226 direct (with resolved-IP fallback) and add domestic public DNS (223.5.5.5, 119.29.29.29) and DoH fallback
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -28,6 +28,11 @@ rules:
   - DOMAIN-SUFFIX,tailscale.com,DIRECT
   - DOMAIN-SUFFIX,tailscale.io,DIRECT
   - IP-CIDR,111.231.15.226/32,DIRECT,no-resolve
+  # Domestic Public DNS & DoH Direct
+  - IP-CIDR,223.5.5.5/32,DIRECT,no-resolve
+  - IP-CIDR,119.29.29.29/32,DIRECT,no-resolve
+  - DOMAIN,doh.pub,DIRECT
+  - DOMAIN,dns.alidns.com,DIRECT
   # Bonjour / mDNS / SSDP
   - IP-CIDR,224.0.0.251/32,DIRECT,no-resolve
   - IP-CIDR,239.255.255.250/32,DIRECT,no-resolve
@@ -201,6 +206,8 @@ rules:
   - DOMAIN-SUFFIX,msftncsi.com,DIRECT
   - DOMAIN-SUFFIX,windows.com,DIRECT
   - DOMAIN-SUFFIX,s-microsoft.com,DIRECT
+  # Private VPS (111.231.15.226) resolved-IP fallback, after explicit domain policies.
+  - IP-CIDR,111.231.15.226/32,DIRECT
   # Russian-hosted IP fallback, after explicit domain policies.
   - GEOIP,RU,justg-vps-RU-direct
   # Default
