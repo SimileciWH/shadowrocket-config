@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.30)
-# Change: route 111.231.15.226 direct (with resolved-IP fallback) and add domestic public DNS (223.5.5.5, 119.29.29.29) and DoH fallback
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.13)
+# Change: route login.tailscale.com via PROXY while keeping Tailscale control plane and private DERP direct
 # Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com

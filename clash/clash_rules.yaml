@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.10.30)
-# Change: route 111.231.15.226 direct (with resolved-IP fallback) and add domestic public DNS (223.5.5.5, 119.29.29.29) and DoH fallback
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.13)
+# Change: route login.tailscale.com via PROXY while keeping Tailscale control plane and private DERP direct
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -24,7 +24,8 @@ rules:
   - DOMAIN-SUFFIX,local,DIRECT
   - DOMAIN-SUFFIX,lan,DIRECT
   - DOMAIN-SUFFIX,arpa,DIRECT
-  # Tailscale Control Plane & Private DERP Relay (Tencent Cloud Shanghai)
+  # Tailscale Web Admin / Login via PROXY; Control Plane & Private DERP Relay (Tencent Cloud Shanghai) DIRECT
+  - DOMAIN,login.tailscale.com,节点选择
   - DOMAIN-SUFFIX,tailscale.com,DIRECT
   - DOMAIN-SUFFIX,tailscale.io,DIRECT
   - IP-CIDR,111.231.15.226/32,DIRECT,no-resolve
