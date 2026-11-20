@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.20)
-# Change: route hfrsggff.com direct for Hefei talent service platform
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21)
+# Change: route mm.smilion.fyi direct with always-real-ip for private Tailnet service
 # Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com

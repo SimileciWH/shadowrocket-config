@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.20)
-# Change: route hfrsggff.com direct for Hefei talent service platform
-# Total entries: 109
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21)
+# Change: route mm.smilion.fyi direct with always-real-ip for private Tailnet service
+# Total entries: 110
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -16,6 +16,7 @@ payload:
   - DOMAIN-SUFFIX,tailscale.com
   - DOMAIN-SUFFIX,tailscale.io
   - IP-CIDR,111.231.15.226/32,no-resolve
+  - DOMAIN,mm.smilion.fyi
   - IP-CIDR,223.5.5.5/32,no-resolve
   - IP-CIDR,119.29.29.29/32,no-resolve
   - DOMAIN,doh.pub
