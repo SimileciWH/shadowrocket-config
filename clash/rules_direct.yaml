@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.13)
-# Change: route login.tailscale.com via PROXY while keeping Tailscale control plane and private DERP direct
-# Total entries: 108
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.20)
+# Change: route hfrsggff.com direct for Hefei talent service platform
+# Total entries: 109
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -56,6 +56,7 @@ payload:
   - DOMAIN-SUFFIX,ah-amr.cn
   - DOMAIN-SUFFIX,ah.gov.cn
   - DOMAIN-SUFFIX,jiashule.com
+  - DOMAIN-SUFFIX,hfrsggff.com
   - DOMAIN-SUFFIX,myquark.cn
   - DOMAIN-SUFFIX,quark.cn
   - DOMAIN-SUFFIX,alipay.com

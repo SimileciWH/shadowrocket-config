@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.13)
-# Change: route login.tailscale.com via PROXY while keeping Tailscale control plane and private DERP direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.20)
+# Change: route hfrsggff.com direct for Hefei talent service platform
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -143,6 +143,8 @@ rules:
   - DOMAIN-SUFFIX,ah-amr.cn,DIRECT
   - DOMAIN-SUFFIX,ah.gov.cn,DIRECT
   - DOMAIN-SUFFIX,jiashule.com,DIRECT
+  # HFRSGGFF / 合肥市人才综合服务平台 direct
+  - DOMAIN-SUFFIX,hfrsggff.com,DIRECT
   # Quark Browser / 夸克浏览器 direct
   - DOMAIN-SUFFIX,myquark.cn,DIRECT
   - DOMAIN-SUFFIX,quark.cn,DIRECT

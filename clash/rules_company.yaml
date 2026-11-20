@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.13)
-# Change: route login.tailscale.com via PROXY while keeping Tailscale control plane and private DERP direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.20)
+# Change: route hfrsggff.com direct for Hefei talent service platform
 # Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com

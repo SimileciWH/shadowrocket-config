@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: PROXY (Claude / Anthropic / AI)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.13)
-# Change: route login.tailscale.com via PROXY while keeping Tailscale control plane and private DERP direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.20)
+# Change: route hfrsggff.com direct for Hefei talent service platform
 # Total entries: 13
 payload:
   - DOMAIN,login.tailscale.com
