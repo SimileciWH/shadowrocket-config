@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21)
-# Change: route mm.smilion.fyi direct with always-real-ip for private Tailnet service
-# Total entries: 110
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21.2)
+# Change: route apib.ai, getapib.org, and aurastd.com direct for HuBuddy API stability
+# Total entries: 113
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -52,6 +52,9 @@ payload:
   - DOMAIN-SUFFIX,superace.com
   - DOMAIN-SUFFIX,codebuddy.cn
   - DOMAIN-SUFFIX,workbuddy.cn
+  - DOMAIN-SUFFIX,apib.ai
+  - DOMAIN-SUFFIX,getapib.org
+  - DOMAIN-SUFFIX,aurastd.com
   - DOMAIN-SUFFIX,ahzsks.cn
   - DOMAIN-SUFFIX,ahzwfw.gov.cn
   - DOMAIN-SUFFIX,ah-amr.cn

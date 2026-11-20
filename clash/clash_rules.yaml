@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21)
-# Change: route mm.smilion.fyi direct with always-real-ip for private Tailnet service
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21.2)
+# Change: route apib.ai, getapib.org, and aurastd.com direct for HuBuddy API stability
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -138,6 +138,10 @@ rules:
   - DOMAIN-SUFFIX,codebuddy.cn,DIRECT
   # WorkBuddy China direct
   - DOMAIN-SUFFIX,workbuddy.cn,DIRECT
+  # HuBuddy / APIMart (apib.ai mirror) & Aura Studio TTS direct
+  - DOMAIN-SUFFIX,apib.ai,DIRECT
+  - DOMAIN-SUFFIX,getapib.org,DIRECT
+  - DOMAIN-SUFFIX,aurastd.com,DIRECT
   # AHZSKS / 安徽省教育招生考试院 direct
   - DOMAIN-SUFFIX,ahzsks.cn,DIRECT
   # AHZWFW / 安徽政务服务网 & 安徽省市场主体登记全程网办 & 创宇盾 CNAME direct
