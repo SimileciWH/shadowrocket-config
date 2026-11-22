@@ -24,6 +24,7 @@ description: 当用户在 shadowrocket-config 仓库中要求处理 Shadowrocket
 - 每次编辑 `sr_ai_secure_final.conf` 后，必须运行 `python3 scripts/sync_clash.py` 同步生成 Clash Verge 规则集（`clash/` 目录）。
 - 需要最终汇报格式时加载 [report-template.md](templates/report-template.md)。
 - 默认只改 GitHub raw 配置链路；除非用户明确要求，不直接改 Shadowrocket 运行态 DB。
+- **Reboot 自动恢复要求（2026-11-22 确认）**：凡涉及网络设定、代理/分流、隧道或依赖代理启动的应用配置，默认必须确保对应电脑 reboot 后可自动恢复（含持久配置、自启/代理就绪等待与核验），除非用户当轮特别说明无需保证 reboot 恢复。
 
 ## 3. 不要做什么
 

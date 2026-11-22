@@ -45,3 +45,8 @@ DOMAIN-SUFFIX,example.com,PROXY
 - 优先域名规则，不写死临时 IP。
 - 不为了一个 URL 扩大到整个云厂商或整个 IP 段。
 - AI 敏感域名、IP 检测站、国内直连站分区摆放，避免后续误读。
+
+## Reboot 自动恢复红线
+
+- 凡涉及网络设定、代理/分流、隧道或依赖网络环境的应用配置，默认必须确保对应电脑 reboot 后可自动恢复，除非用户当轮明确说明无需保证 reboot 恢复。
+- 落地时必须核验四项：1) 配置与凭据已持久化落盘；2) 系统登录/自启项（LaunchAgent/Login Item/System Extension）已就绪；3) 启动脚本对上游代理端口做就绪等待并注入完整代理环境变量；4) 通过真实重启或 `launchctl kickstart` 验证冷启动恢复结果。
