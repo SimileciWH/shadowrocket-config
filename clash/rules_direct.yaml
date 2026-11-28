@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.21.2)
-# Change: route apib.ai, getapib.org, and aurastd.com direct for HuBuddy API stability
-# Total entries: 113
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.1)
+# Change: route apple-dns.cn, icloud-content.com.cn, gs-loc-cn.apple.com, cmecloud.cn, meituan.net/com, amap.com, and msn.cn direct
+# Total entries: 121
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -38,8 +38,11 @@ payload:
   - DOMAIN-SUFFIX,apple-cloudkit.com
   - DOMAIN-SUFFIX,icloud.com
   - DOMAIN-SUFFIX,icloud-content.com
+  - DOMAIN-SUFFIX,icloud-content.com.cn
   - DOMAIN-SUFFIX,icloud.apple.com
   - DOMAIN-SUFFIX,icloud.com.cn
+  - DOMAIN-SUFFIX,apple-dns.cn
+  - DOMAIN,gs-loc-cn.apple.com
   - DOMAIN-SUFFIX,apple-livephotoskit.com
   - DOMAIN-SUFFIX,cdn-apple.com
   - DOMAIN-SUFFIX,gc.apple.com
@@ -107,6 +110,10 @@ payload:
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn
   - DOMAIN-SUFFIX,dscache.tencent-cloud.cn
   - DOMAIN-SUFFIX,cdn-go.cn
+  - DOMAIN-SUFFIX,cmecloud.cn
+  - DOMAIN-SUFFIX,meituan.net
+  - DOMAIN-SUFFIX,meituan.com
+  - DOMAIN-SUFFIX,amap.com
   - DOMAIN-SUFFIX,mp.microsoft.com
   - DOMAIN-SUFFIX,windowsupdate.com
   - DOMAIN-SUFFIX,windowsupdate.microsoft.com
@@ -115,4 +122,5 @@ payload:
   - DOMAIN-SUFFIX,msftncsi.com
   - DOMAIN-SUFFIX,windows.com
   - DOMAIN-SUFFIX,s-microsoft.com
+  - DOMAIN-SUFFIX,msn.cn
   - IP-CIDR,111.231.15.226/32
