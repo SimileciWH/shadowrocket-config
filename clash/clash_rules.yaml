@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.3)
-# Change: route tencent-cloud.cn, tencent.cn, and dnspod.cn direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.29.1)
+# Change: add AUTO-CA-RESI fallback proxy group for automatic US residential failover
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.

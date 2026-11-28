@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.3)
-# Change: route tencent-cloud.cn, tencent.cn, and dnspod.cn direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.29.1)
+# Change: add AUTO-CA-RESI fallback proxy group for automatic US residential failover
 # Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com
