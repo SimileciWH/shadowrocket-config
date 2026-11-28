@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.2)
-# Change: route tencentcos.cn, digicert.cn, walmartmobile.cn, wxgateway.com, and zsxq.com direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.3)
+# Change: route tencent-cloud.cn, tencent.cn, and dnspod.cn direct
 # Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com

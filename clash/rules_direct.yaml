@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.2)
-# Change: route tencentcos.cn, digicert.cn, walmartmobile.cn, wxgateway.com, and zsxq.com direct
-# Total entries: 126
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.3)
+# Change: route tencent-cloud.cn, tencent.cn, and dnspod.cn direct
+# Total entries: 129
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -105,6 +105,9 @@ payload:
   - DOMAIN-SUFFIX,myqcloud.com
   - DOMAIN,dns.weixin.qq.com.cn
   - DOMAIN-SUFFIX,cloud.tencent.com
+  - DOMAIN-SUFFIX,tencent-cloud.cn
+  - DOMAIN-SUFFIX,tencent.cn
+  - DOMAIN-SUFFIX,dnspod.cn
   - DOMAIN-SUFFIX,qcloudimg.tencent-cloud.cn
   - DOMAIN-SUFFIX,cloudcache.tencent-cloud.com
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn
