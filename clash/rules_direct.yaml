@@ -1,7 +1,7 @@
 # Clash Classical Rule Provider: DIRECT
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.1)
-# Change: route apple-dns.cn, icloud-content.com.cn, gs-loc-cn.apple.com, cmecloud.cn, meituan.net/com, amap.com, and msn.cn direct
-# Total entries: 121
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.2)
+# Change: route tencentcos.cn, digicert.cn, walmartmobile.cn, wxgateway.com, and zsxq.com direct
+# Total entries: 126
 payload:
   - DOMAIN,ezgo.realsil.com.cn
   - IP-CIDR,127.0.0.0/8,no-resolve
@@ -110,7 +110,12 @@ payload:
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn
   - DOMAIN-SUFFIX,dscache.tencent-cloud.cn
   - DOMAIN-SUFFIX,cdn-go.cn
+  - DOMAIN-SUFFIX,tencentcos.cn
   - DOMAIN-SUFFIX,cmecloud.cn
+  - DOMAIN-SUFFIX,digicert.cn
+  - DOMAIN-SUFFIX,walmartmobile.cn
+  - DOMAIN-SUFFIX,wxgateway.com
+  - DOMAIN-SUFFIX,zsxq.com
   - DOMAIN-SUFFIX,meituan.net
   - DOMAIN-SUFFIX,meituan.com
   - DOMAIN-SUFFIX,amap.com

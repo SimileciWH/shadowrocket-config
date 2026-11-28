@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: PROXY (Claude / Anthropic / AI)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.1)
-# Change: route apple-dns.cn, icloud-content.com.cn, gs-loc-cn.apple.com, cmecloud.cn, meituan.net/com, amap.com, and msn.cn direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.2)
+# Change: route tencentcos.cn, digicert.cn, walmartmobile.cn, wxgateway.com, and zsxq.com direct
 # Total entries: 13
 payload:
   - DOMAIN,login.tailscale.com

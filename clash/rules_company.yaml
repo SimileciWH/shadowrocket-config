@@ -1,6 +1,6 @@
 # Clash Classical Rule Provider: CORP-WINDOWS (Company Internal)
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.1)
-# Change: route apple-dns.cn, icloud-content.com.cn, gs-loc-cn.apple.com, cmecloud.cn, meituan.net/com, amap.com, and msn.cn direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.2)
+# Change: route tencentcos.cn, digicert.cn, walmartmobile.cn, wxgateway.com, and zsxq.com direct
 # Total entries: 7
 payload:
   - DOMAIN-SUFFIX,realtek.com

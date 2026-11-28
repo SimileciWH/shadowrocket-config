@@ -1,6 +1,6 @@
 # Complete Clash Rules
-# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.1)
-# Change: route apple-dns.cn, icloud-content.com.cn, gs-loc-cn.apple.com, cmecloud.cn, meituan.net/com, amap.com, and msn.cn direct
+# Synced from: sr_ai_secure_final.conf (Version: 2026.11.28.2)
+# Change: route tencentcos.cn, digicert.cn, walmartmobile.cn, wxgateway.com, and zsxq.com direct
 # Note: 'PROXY' in Shadowrocket maps to '节点选择' in Clash.
 rules:
   # Company routes use the existing CORP-WINDOWS node configured in Shadowrocket.
@@ -208,8 +208,14 @@ rules:
   - DOMAIN-SUFFIX,cloudcache.tencentcs.cn,DIRECT
   - DOMAIN-SUFFIX,dscache.tencent-cloud.cn,DIRECT
   - DOMAIN-SUFFIX,cdn-go.cn,DIRECT
+  - DOMAIN-SUFFIX,tencentcos.cn,DIRECT
   # China Mobile Cloud / 移动云 direct
   - DOMAIN-SUFFIX,cmecloud.cn,DIRECT
+  # Domestic OCSP/CRL & apps direct (DigiCert CN, Walmart CN, WeChat Gateway, ZSXQ)
+  - DOMAIN-SUFFIX,digicert.cn,DIRECT
+  - DOMAIN-SUFFIX,walmartmobile.cn,DIRECT
+  - DOMAIN-SUFFIX,wxgateway.com,DIRECT
+  - DOMAIN-SUFFIX,zsxq.com,DIRECT
   # Meituan / 美团 direct
   - DOMAIN-SUFFIX,meituan.net,DIRECT
   - DOMAIN-SUFFIX,meituan.com,DIRECT
